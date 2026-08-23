@@ -101,11 +101,19 @@ function Map({
   const [selectedReportId, setSelectedReportId] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const selectedReport = selectedReportId
-    ? reports.find((r) => r.id === selectedReportId)
+    ? reports.find(
+        (r) =>
+          r.id?.toString() === selectedReportId?.toString() ||
+          r._id?.toString() === selectedReportId?.toString()
+      )
     : null;
   const [selectedEventId, setSelectedEventId] = useState(null);
   const selectedEvent = selectedEventId
-    ? events.find((e) => e.id === selectedEventId)
+    ? events.find(
+        (e) =>
+          e.id?.toString() === selectedEventId?.toString() ||
+          e._id?.toString() === selectedEventId?.toString()
+      )
     : null;
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [isSelectingEventLocation, setIsSelectingEventLocation] =
@@ -460,8 +468,9 @@ function Map({
 
       if (isReportMode) {
         reports.forEach((report) => {
+          const id = report.id || report._id;
           viewer.entities.add({
-            id: `report-${report.id}`,
+            id: `report-${id}`,
             position: Cartesian3.fromDegrees(report.lng, report.lat),
             billboard: {
               image: report.seen ? seenHeatmapImage : heatmapImage,
@@ -474,8 +483,9 @@ function Map({
         });
       } else if (isEventMode) {
         events.forEach((event) => {
+          const id = event.id || event._id;
           viewer.entities.add({
-            id: `event-${event.id}`,
+            id: `event-${id}`,
             position: Cartesian3.fromDegrees(event.lng, event.lat),
             billboard: {
               image: event.seen ? seenHeatmapImage : heatmapImage,
@@ -553,15 +563,17 @@ function Map({
                 if (onRequireLogin) onRequireLogin();
                 return;
               }
-              const reportId = parseInt(
-                pickedObject.id.id.replace("report-", ""),
-                10,
+              const reportId = pickedObject.id.id.replace("report-", "");
+              const report = reports.find(
+                (r) =>
+                  r.id?.toString() === reportId ||
+                  r._id?.toString() === reportId
               );
-              const report = reports.find((r) => r.id === reportId);
               if (report) {
-                setSelectedReportId(reportId);
+                const finalId = report.id || report._id || reportId;
+                setSelectedReportId(finalId);
                 if (onReportOpened && !report.seen) {
-                  onReportOpened(reportId);
+                  onReportOpened(finalId);
                 }
               }
             } else if (pickedObject.id.id.startsWith("event-")) {
@@ -569,15 +581,17 @@ function Map({
                 if (onRequireLogin) onRequireLogin();
                 return;
               }
-              const eventId = parseInt(
-                pickedObject.id.id.replace("event-", ""),
-                10,
+              const eventId = pickedObject.id.id.replace("event-", "");
+              const event = events.find(
+                (e) =>
+                  e.id?.toString() === eventId ||
+                  e._id?.toString() === eventId
               );
-              const event = events.find((e) => e.id === eventId);
               if (event) {
-                setSelectedEventId(eventId);
+                const finalId = event.id || event._id || eventId;
+                setSelectedEventId(finalId);
                 if (onEventOpened && !event.seen) {
-                  onEventOpened(eventId);
+                  onEventOpened(finalId);
                 }
               }
             } else if (pickedObject.id.id === "user-location-dot") {
