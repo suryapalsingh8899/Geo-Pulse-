@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import Report from "../models/Report.js";
 import Event from "../models/Event.js";
 import { isMongoConnected, memoryStore } from "../config/db.js";
+import { sendSmsOtp } from "../utils/smsService.js";
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || "geopulse_super_secret_jwt_key_2026", {
@@ -101,10 +102,13 @@ export const requestRegisterOtp = async (req, res) => {
     current.tempOtpExpiry = Date.now() + 10 * 60 * 1000;
     tempSecurityStore.set(phone, current);
 
+    // Send real SMS to user's phone number
+    const smsResult = await sendSmsOtp(phone, otp);
+
     return res.status(200).json({
       success: true,
-      message: `OTP sent successfully`,
-      otp,
+      message: smsResult.success ? "OTP sent to your mobile phone" : "OTP sent successfully",
+      otp, // Kept in payload for instant testing and on-screen toast fallback
     });
   } catch (error) {
     console.error("Register OTP error:", error);
@@ -256,9 +260,12 @@ export const requestLoginOtp = async (req, res) => {
       await user.save();
     }
 
+    // Send real SMS to user's phone number
+    const smsResult = await sendSmsOtp(phone, otp);
+
     return res.status(200).json({
       success: true,
-      message: "OTP sent successfully",
+      message: smsResult.success ? "OTP sent to your mobile phone" : "OTP sent successfully",
       otp,
     });
   } catch (error) {
