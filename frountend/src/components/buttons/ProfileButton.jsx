@@ -1,10 +1,14 @@
-import React from 'react';
+import React from "react";
 
 const ProfileButton = ({ onClick }) => {
   return (
-    <button 
-      className="btn btn-outline" 
-      style={{ background: 'rgba(15, 23, 42, 0.7)', border: 'none', color: '#fff' }} 
+    <button
+      className="btn btn-outline"
+      style={{
+        background: "var(--glass-bg)",
+        border: "none",
+        color: "var(--text-color)",
+      }}
       onClick={onClick}
     >
       Profile

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import './index.css';
-import HomePage from './components/HomePage';
-import SplashScreen from './components/SplashScreen';
-import OfflineBuffer from './components/OfflineBuffer';
+import React, { useState, useEffect } from "react";
+import "./index.css";
+import HomePage from "./components/layout/HomePage";
+import SplashScreen from "./components/layout/SplashScreen";
+import OfflineBuffer from "./components/utils/OfflineBuffer";
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
