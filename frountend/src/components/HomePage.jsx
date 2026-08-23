@@ -75,8 +75,17 @@ function HomePage() {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [toastMessage, setToastMessage] = useState(null);
   const [toastType, setToastType] = useState('success');
+
+  React.useEffect(() => {
+    if (darkMode) {
+      document.body.classList.remove('light-mode');
+    } else {
+      document.body.classList.add('light-mode');
+    }
+  }, [darkMode]);
 
   const showToast = (message, type = 'success') => {
     setToastMessage(message);
@@ -405,7 +414,7 @@ function HomePage() {
   return (
     <div className="homepage-container">
       {/* Permanent fullscreen map background */}
-      <div className="map-background">
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 }}>
         <Map
           isLoggedIn={isLoggedIn}
           onRequireLogin={() => setShowLoginModal(true)}
@@ -420,6 +429,8 @@ function HomePage() {
           onAuthorClick={(user) => setSelectedPublicUser(user)}
           userName={userName}
           setUserName={setUserName}
+          isDarkMode={darkMode}
+          setDarkMode={setDarkMode}
         />
       </div>
 

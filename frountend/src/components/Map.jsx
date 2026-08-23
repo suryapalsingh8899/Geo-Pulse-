@@ -47,7 +47,9 @@ function Map({
   onEventOpened,
   onAuthorClick,
   userName,
-  setUserName
+  setUserName,
+  isDarkMode = true,
+  setDarkMode
 }) {
   const { t } = useTranslation();
   const cesiumContainer = useRef(null);
@@ -176,11 +178,18 @@ function Map({
       });
       const baseLayer = viewer.imageryLayers.addImageryProvider(osmProvider);
 
-      // Match exact Snapchat Dark Mode (dark slate land, black water)
-      baseLayer.brightness = 0.25;
-      baseLayer.contrast = 1.35;
-      baseLayer.saturation = 0.1;
-      baseLayer.gamma = 0.8;
+      // Configure Light or Dark Mode Initially
+      if (isDarkMode) {
+        baseLayer.brightness = 0.25;
+        baseLayer.contrast = 1.35;
+        baseLayer.saturation = 0.1;
+        baseLayer.gamma = 0.8;
+      } else {
+        baseLayer.brightness = 1.0;
+        baseLayer.contrast = 1.0;
+        baseLayer.saturation = 1.0;
+        baseLayer.gamma = 1.0;
+      }
 
 
 
@@ -253,6 +262,40 @@ function Map({
       }
     };
   }, []); // Empty dependency array ensures viewer is created only once
+
+  // Effect to toggle dark/light mode on the fly
+  useEffect(() => {
+    if (viewerInstance.current) {
+      const viewer = viewerInstance.current;
+      const baseLayer = viewer.imageryLayers.get(0);
+      if (baseLayer) {
+        if (isDarkMode) {
+          baseLayer.brightness = 0.25;
+          baseLayer.contrast = 1.35;
+          baseLayer.saturation = 0.1;
+          baseLayer.gamma = 0.8;
+          viewer.scene.backgroundColor = Color.BLACK;
+          if (viewer.scene.skyAtmosphere) {
+            viewer.scene.skyAtmosphere.hueShift = -0.1;
+            viewer.scene.skyAtmosphere.saturationShift = 0.5;
+            viewer.scene.skyAtmosphere.brightnessShift = 0.5;
+          }
+        } else {
+          baseLayer.brightness = 1.0;
+          baseLayer.contrast = 1.0;
+          baseLayer.saturation = 1.0;
+          baseLayer.gamma = 1.0;
+          viewer.scene.backgroundColor = Color.WHITE;
+          if (viewer.scene.skyAtmosphere) {
+            viewer.scene.skyAtmosphere.hueShift = 0.0;
+            viewer.scene.skyAtmosphere.saturationShift = 0.0;
+            viewer.scene.skyAtmosphere.brightnessShift = 0.0;
+          }
+        }
+        viewer.scene.requestRender();
+      }
+    }
+  }, [isDarkMode]);
 
   // Force Cesium to re-render when UI overlays open/close since requestRenderMode is true
   useEffect(() => {
@@ -564,6 +607,8 @@ function Map({
           setAlertsEnabled={setAlertsEnabled}
           userName={userName}
           setUserName={setUserName}
+          darkMode={isDarkMode}
+          setDarkMode={setDarkMode}
         />,
         document.body
       )}

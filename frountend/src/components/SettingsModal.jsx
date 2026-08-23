@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const SettingsModal = ({ onClose, locationEnabled, setLocationEnabled, alertsEnabled, setAlertsEnabled, userName, setUserName }) => {
+const SettingsModal = ({ onClose, locationEnabled, setLocationEnabled, alertsEnabled, setAlertsEnabled, userName, setUserName, darkMode, setDarkMode }) => {
   const { t, i18n } = useTranslation();
-  const [darkMode, setDarkMode] = useState(true);
   
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(userName);
