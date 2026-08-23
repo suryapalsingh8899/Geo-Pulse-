@@ -1,7 +1,21 @@
 import React, { useState } from 'react';
 
-const ReportDetailModal = ({ report, onClose, onVote, onAuthorClick }) => {
+// Haversine distance helper
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const d = R * c;
+  return d < 1 ? (d * 1000).toFixed(0) + ' m' : d.toFixed(2) + ' km';
+};
+
+const ReportDetailModal = ({ report, onClose, onVote, onAuthorClick, userLocation }) => {
   const userVote = report.userVote || null;
+  const distance = userLocation ? calculateDistance(userLocation.lat, userLocation.lng, report.lat, report.lng) : null;
 
   const handleUpvote = () => {
     let upDelta = 0;
@@ -41,7 +55,7 @@ const ReportDetailModal = ({ report, onClose, onVote, onAuthorClick }) => {
     <div className="modal-overlay" onClick={onClose} onWheel={(e) => e.stopPropagation()} style={{ zIndex: 3000 }}>
       <div className="modal-card glass-card" onClick={e => e.stopPropagation()}>
         <button className="close-btn" onClick={onClose}>&times;</button>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>
           <h2 className="modal-title" style={{ fontSize: '1.5rem', margin: 0 }}>{report.title || "Report Details"}</h2>
           {report.author && (
             <div 
@@ -54,6 +68,13 @@ const ReportDetailModal = ({ report, onClose, onVote, onAuthorClick }) => {
             </div>
           )}
         </div>
+
+        {distance && (
+          <div style={{ marginBottom: '15px', color: '#2dd4bf', fontWeight: 'bold', fontSize: '0.9rem' }}>
+            📍 {distance} away from you
+          </div>
+        )}
+
         
         {(report.image || report.media) && (
           <div style={{ marginBottom: '15px', borderRadius: '12px', overflow: 'hidden' }}>

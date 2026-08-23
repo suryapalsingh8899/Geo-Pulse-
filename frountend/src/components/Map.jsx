@@ -11,22 +11,22 @@ import SettingsModal from './SettingsModal';
 import { useTranslation } from 'react-i18next';
 
 const mockEvents = [
-  { 
-    id: 201, lat: 28.62, lng: 77.20, title: "Delhi Music Festival", description: "Annual music festival at Connaught Place featuring local bands and food stalls. Come enjoy the evening!", 
+  {
+    id: 201, lat: 28.62, lng: 77.20, title: "Delhi Music Festival", description: "Annual music festival at Connaught Place featuring local bands and food stalls. Come enjoy the evening!",
     poster: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&q=80",
     timing: "6:00 PM - 11:00 PM, Oct 25", isPublic: true,
     photos: ["https://images.unsplash.com/photo-1540039155732-684736dd6330?w=400&q=80", "https://images.unsplash.com/photo-1470229722913-7c090be5c5a4?w=400&q=80"],
     videos: []
   },
-  { 
-    id: 202, lat: 19.07, lng: 72.87, title: "Tech Innovators Conference", description: "A premier tech conference in Mumbai focusing on AI and Web3.", 
+  {
+    id: 202, lat: 19.07, lng: 72.87, title: "Tech Innovators Conference", description: "A premier tech conference in Mumbai focusing on AI and Web3.",
     poster: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=600&q=80",
     timing: "9:00 AM - 5:00 PM, Nov 2-3", isPublic: false,
     photos: ["https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&q=80"],
     videos: []
   },
-  { 
-    id: 203, lat: 12.97, lng: 77.59, title: "Bangalore Food Carnival", description: "Taste the best street food and cuisines from all over India.", 
+  {
+    id: 203, lat: 12.97, lng: 77.59, title: "Bangalore Food Carnival", description: "Taste the best street food and cuisines from all over India.",
     poster: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=80",
     timing: "11:00 AM - 10:00 PM, Dec 15", isPublic: true,
     photos: ["https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?w=400&q=80", "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80"],
@@ -81,9 +81,9 @@ function Map({
         (error) => {
           console.error("Error watching location:", error);
           if (error.code === 1) { // PERMISSION_DENIED
-             setLocationEnabled(false);
-             setUserLocation(null);
-             alert("Location permission denied. Please enable it in your browser settings.");
+            setLocationEnabled(false);
+            setUserLocation(null);
+            alert("Location permission denied. Please enable it in your browser settings.");
           }
         },
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
@@ -182,22 +182,7 @@ function Map({
       baseLayer.saturation = 0.1;
       baseLayer.gamma = 0.8;
 
-      // Add 3D Buildings styled as glowing cyan/teal blocks to match Snapchat's vibrant dark map aesthetic
-      createOsmBuildingsAsync().then((buildingsTileset) => {
-        // Space & Time Complexity Optimizations for 3D Tiles:
-        buildingsTileset.maximumScreenSpaceError = 16;
-        buildingsTileset.maximumMemoryUsage = 256;
-        buildingsTileset.skipLevelOfDetail = true;
 
-        buildingsTileset.style = new Cesium3DTileStyle({
-          color: {
-            conditions: [
-              ["true", "color('#2dd4bf', 0.5)"] // Glowing semi-transparent teal/cyan for all buildings
-            ]
-          }
-        });
-        viewer.scene.primitives.add(buildingsTileset);
-      });
 
       // Set view directly to India to massively speed up initial load (avoids loading tiles along a flight path)
       viewer.camera.setView({
@@ -280,7 +265,7 @@ function Map({
   useEffect(() => {
     if (!viewerInstance.current) return;
     const viewer = viewerInstance.current;
-    
+
     // Remove all entities except the live location dot
     viewer.entities.values.slice().forEach(entity => {
       if (entity.id !== 'user-location-dot') {
@@ -293,7 +278,7 @@ function Map({
       viewer.scene.postProcessStages.bloom.uniforms.contrast = 128;
       viewer.scene.postProcessStages.bloom.uniforms.brightness = -0.3;
       viewer.scene.postProcessStages.bloom.uniforms.delta = 1.0;
-      viewer.scene.postProcessStages.bloom.uniforms.sigma = 1.5; 
+      viewer.scene.postProcessStages.bloom.uniforms.sigma = 1.5;
       viewer.scene.postProcessStages.bloom.uniforms.stepSize = 2.0;
 
       const createHeatmapImage = () => {
@@ -302,7 +287,7 @@ function Map({
         canvas.height = 128;
         const ctx = canvas.getContext('2d');
         const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-        
+
         // Red core, yellow outer, fading to transparent
         // When these stack, the red cores will multiply and become highly visible
         if (isEventMode) {
@@ -316,7 +301,7 @@ function Map({
           gradient.addColorStop(0.6, 'rgba(255, 255, 0, 0.1)');
           gradient.addColorStop(1, 'rgba(255, 255, 0, 0.0)');
         }
-        
+
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, 128, 128);
         return canvas;
@@ -328,12 +313,12 @@ function Map({
         canvas.height = 128;
         const ctx = canvas.getContext('2d');
         const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-        
+
         gradient.addColorStop(0, 'rgba(128, 128, 128, 0.4)');
         gradient.addColorStop(0.3, 'rgba(128, 128, 128, 0.2)');
         gradient.addColorStop(0.6, 'rgba(128, 128, 128, 0.1)');
         gradient.addColorStop(1, 'rgba(128, 128, 128, 0.0)');
-        
+
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, 128, 128);
         return canvas;
@@ -386,9 +371,9 @@ function Map({
   useEffect(() => {
     if (!viewerInstance.current) return;
     const viewer = viewerInstance.current;
-    
+
     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
-    
+
     if (isReportMode || isEventMode) {
       if (isSelectingLocation || isSelectingEventLocation) {
         const cursorSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="%23ef4444" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>`;
@@ -399,7 +384,7 @@ function Map({
             const cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
             const lon = CesiumMath.toDegrees(cartographic.longitude);
             const lat = CesiumMath.toDegrees(cartographic.latitude);
-            
+
             if (isSelectingLocation) {
               setNewReportLocation({ lat, lng: lon });
               setIsSelectingLocation(false);
@@ -417,8 +402,8 @@ function Map({
           if (pickedObject && pickedObject.id && typeof pickedObject.id.id === 'string') {
             if (pickedObject.id.id.startsWith('report-')) {
               if (!isLoggedIn) {
-                 if (onRequireLogin) onRequireLogin();
-                 return;
+                if (onRequireLogin) onRequireLogin();
+                return;
               }
               const reportId = parseInt(pickedObject.id.id.replace('report-', ''), 10);
               const report = reports.find(r => r.id === reportId);
@@ -430,8 +415,8 @@ function Map({
               }
             } else if (pickedObject.id.id.startsWith('event-')) {
               if (!isLoggedIn) {
-                 if (onRequireLogin) onRequireLogin();
-                 return;
+                if (onRequireLogin) onRequireLogin();
+                return;
               }
               const eventId = parseInt(pickedObject.id.id.replace('event-', ''), 10);
               const event = events.find(e => e.id === eventId);
@@ -530,14 +515,14 @@ function Map({
     <div className="map-wrapper" onWheel={handleWheel}>
       <div ref={cesiumContainer} style={{ width: '100%', height: '100%' }} />
       {selectedReport && createPortal(
-        <ReportDetailModal report={selectedReport} onClose={() => setSelectedReportId(null)} onVote={onVote} onAuthorClick={onAuthorClick} />,
+        <ReportDetailModal report={selectedReport} onClose={() => setSelectedReportId(null)} onVote={onVote} onAuthorClick={onAuthorClick} userLocation={userLocation} />,
         document.body
       )}
       {selectedEvent && createPortal(
-        <EventDetailModal event={selectedEvent} onClose={() => setSelectedEventId(null)} onVote={onEventVote} onAuthorClick={onAuthorClick} />,
+        <EventDetailModal event={selectedEvent} onClose={() => setSelectedEventId(null)} onVote={onEventVote} onAuthorClick={onAuthorClick} userLocation={userLocation} />,
         document.body
       )}
-      
+
       {isSelectingLocation && (
         <div style={{ position: 'absolute', top: '100px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.8)', padding: '15px 30px', borderRadius: '30px', color: 'white', zIndex: 100, border: '1px solid #2dd4bf', boxShadow: '0 0 20px rgba(45, 212, 191, 0.5)' }}>
           Click anywhere on the map to pin the report location!
@@ -553,26 +538,26 @@ function Map({
       )}
 
       {newReportLocation && createPortal(
-        <AddReportModal 
-          location={newReportLocation} 
-          onSubmit={handleAddReportSubmit} 
-          onClose={() => setNewReportLocation(null)} 
+        <AddReportModal
+          location={newReportLocation}
+          onSubmit={handleAddReportSubmit}
+          onClose={() => setNewReportLocation(null)}
         />,
         document.body
       )}
 
       {newEventLocation && createPortal(
-        <AddEventModal 
-          location={newEventLocation} 
-          onSubmit={handleAddEventSubmit} 
-          onClose={() => setNewEventLocation(null)} 
+        <AddEventModal
+          location={newEventLocation}
+          onSubmit={handleAddEventSubmit}
+          onClose={() => setNewEventLocation(null)}
         />,
         document.body
       )}
 
       {isSettingsOpen && createPortal(
-        <SettingsModal 
-          onClose={() => setIsSettingsOpen(false)} 
+        <SettingsModal
+          onClose={() => setIsSettingsOpen(false)}
           locationEnabled={locationEnabled}
           setLocationEnabled={setLocationEnabled}
           alertsEnabled={alertsEnabled}
@@ -621,7 +606,7 @@ function Map({
               }}>Alerts</button>
               <button className="btn btn-outline footer-btn" onClick={() => {
                 alert("Coming soon!");
-              }}>About Location</button>
+              }}>Info</button>
             </>
           )}
         </div>
