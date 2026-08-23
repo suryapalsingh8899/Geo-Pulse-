@@ -80,6 +80,8 @@ function Map({
   setReports,
   events = [],
   setEvents,
+  onAddReport,
+  onAddEvent,
   onVote,
   onEventVote,
   onReportOpened,
@@ -672,25 +674,33 @@ function Map({
     }
   };
 
-  const handleAddReportSubmit = (reportData) => {
-    const newReport = {
-      ...reportData,
-      id: Date.now(), // Generate a unique ID
-      upvotes: 0,
-      downvotes: 0,
-      isMine: true,
-    };
-    setReports([...reports, newReport]);
+  const handleAddReportSubmit = async (reportData) => {
+    if (onAddReport) {
+      await onAddReport(reportData);
+    } else {
+      const newReport = {
+        ...reportData,
+        id: Date.now(),
+        upvotes: 0,
+        downvotes: 0,
+        isMine: true,
+      };
+      setReports([...reports, newReport]);
+    }
     setNewReportLocation(null);
   };
 
-  const handleAddEventSubmit = (eventData) => {
-    const newEvent = {
-      ...eventData,
-      id: Date.now(), // Generate a unique ID
-      isMine: true,
-    };
-    setEvents([...events, newEvent]);
+  const handleAddEventSubmit = async (eventData) => {
+    if (onAddEvent) {
+      await onAddEvent(eventData);
+    } else {
+      const newEvent = {
+        ...eventData,
+        id: Date.now(),
+        isMine: true,
+      };
+      setEvents([...events, newEvent]);
+    }
     setNewEventLocation(null);
   };
 

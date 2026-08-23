@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import api from "../../services/api";
 
 const AddReportModal = ({
   location,
@@ -22,31 +23,35 @@ const AddReportModal = ({
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     const name = e.target.name;
     if (file) {
-      setUploadProgress((prev) => ({ ...prev, [name]: 0 }));
+      setUploadProgress((prev) => ({ ...prev, [name]: 20 }));
 
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        if (progress >= 100) {
-          clearInterval(interval);
+      try {
+        const res = await api.upload.file(file);
+        if (res.success && res.url) {
+          setFormData((prev) => ({ ...prev, [name]: res.url }));
+          setUploadProgress((prev) => ({ ...prev, [name]: "done" }));
+        } else {
           const objectUrl = URL.createObjectURL(file);
           setFormData((prev) => ({ ...prev, [name]: objectUrl }));
           setUploadProgress((prev) => ({ ...prev, [name]: "done" }));
-          setTimeout(() => {
-            setUploadProgress((prev) => {
-              const newProgress = { ...prev };
-              delete newProgress[name];
-              return newProgress;
-            });
-          }, 2000);
-        } else {
-          setUploadProgress((prev) => ({ ...prev, [name]: progress }));
         }
-      }, 150);
+      } catch (err) {
+        const objectUrl = URL.createObjectURL(file);
+        setFormData((prev) => ({ ...prev, [name]: objectUrl }));
+        setUploadProgress((prev) => ({ ...prev, [name]: "done" }));
+      }
+
+      setTimeout(() => {
+        setUploadProgress((prev) => {
+          const newProgress = { ...prev };
+          delete newProgress[name];
+          return newProgress;
+        });
+      }, 2000);
     }
   };
 

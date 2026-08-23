@@ -13,27 +13,45 @@ The primary motivation behind Geo-Pulse is to make the voice of local people mor
 - **User Authentication & Profiles**: Secure OTP-based phone number login, personalized profiles, and user contribution tracking.
 
 ## 🛠️ Tech Stack
-The development of Geo-Pulse follows a systematic full-stack web development approach:
-- **Frontend**: React.js (built with Vite)
-- **Backend**: Node.js (RESTful APIs)
-- **Database**: MongoDB
+- **Frontend**: React.js 19 (built with Vite)
+- **Backend**: Node.js & Express.js (RESTful APIs with Multer file uploads & JWT)
+- **Database**: MongoDB (with Mongoose ODM & resilient development store)
 - **Map Engine**: CesiumJS (Interactive 3D / 2D Map)
 - **Hosting / Deployment**: Render
+
+## 🏃 Running Locally
+
+### 1. Start Backend Server
+```bash
+cd backend
+npm install
+npm run dev # Runs on http://localhost:5000
+```
+
+### 2. Start Frontend App
+```bash
+cd frountend
+npm install
+npm run dev # Runs on http://localhost:5173
+```
+
+### 3. Run Backend API Tests
+```bash
+cd backend
+npm test
+```
 
 ## 📈 Current Progress
 - [x] Initialized the `frountend` project environment with React.js and Vite.
 - [x] Integrated **CesiumJS** for the core interactive map interface.
 - [x] Designed and implemented basic UI components, including the Home Page, Splash Screen, and Map viewer.
 - [x] Built the frontend structures for various interaction modals (Add Event, Add Report, User Profile, Settings, etc.).
-- [x] Set up basic client-side routing, modular components, and static assets.
-
-## 📅 Future Updates & Roadmap
-- [ ] **Backend Integration**: Set up the Node.js server and connect it to MongoDB for data storage (Users, Reports, Events).
-- [ ] **Authentication**: Implement secure OTP-based phone number verification for user login.
-- [ ] **Dynamic Reporting**: Connect the frontend Add Report modal to the backend to dynamically render user-submitted issues onto the CesiumJS map.
-- [ ] **Voting System**: Implement the upvote/downvote mechanism for community reports to highlight high-priority issues.
-- [ ] **Event Publishing**: Enable users to successfully publish, edit, and discover upcoming events directly on the map interface.
-- [ ] **Deployment**: Finalize testing and deploy the complete MERN stack application (via Render).
+- [x] **Backend Integration**: Set up the Node.js Express server with RESTful APIs.
+- [x] **Database & Models**: MongoDB Schemas for Users, Reports, and Events with Mongoose and seed data.
+- [x] **Authentication**: Secure OTP-based phone number verification, JWT issuance, and security lockouts.
+- [x] **Dynamic Reporting & Media**: Connected frontend modals with backend file uploads (Multer) and geo-coordinates.
+- [x] **Voting & Reputation**: Upvote/downvote mechanism with real-time user reputation stats.
+- [x] **Event Publishing**: Publishing, editing, voting, and discovering events directly on the map interface.
 
 ---
 *Developed as a project by Suryapal Singh.*

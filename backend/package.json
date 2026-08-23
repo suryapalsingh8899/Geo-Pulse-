@@ -1,0 +1,30 @@
+{
+  "name": "geo-pulse-backend",
+  "version": "1.0.0",
+  "description": "Node.js REST API Backend for Geo-Pulse",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test-api.js"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "mongodb",
+    "geopulse",
+    "cesium"
+  ],
+  "author": "Suryapal Singh",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1"
+  }
+}

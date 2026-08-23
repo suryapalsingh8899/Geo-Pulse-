@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../index.css";
 import Map from "../map/Map";
 import LoginButton from "../buttons/LoginButton";
@@ -7,11 +7,13 @@ import ProfileButton from "../buttons/ProfileButton";
 import LogoutButton from "../buttons/LogoutButton";
 import ProfileModal from "../modals/ProfileModal";
 import AddReportModal from "../modals/AddReportModal";
+import AddEventModal from "../modals/AddEventModal";
 import PublicProfileModal from "../modals/PublicProfileModal";
+import api from "../../services/api";
 
 const initialMockReports = [
   {
-    id: 1,
+    id: "rep_1",
     lat: 28.6139,
     lng: 77.209,
     title: "Traffic block at CP",
@@ -29,7 +31,7 @@ const initialMockReports = [
     },
   },
   {
-    id: 2,
+    id: "rep_2",
     lat: 28.618,
     lng: 77.205,
     title: "Accident near CP",
@@ -42,7 +44,7 @@ const initialMockReports = [
     author: { name: "User", profilePic: null },
   },
   {
-    id: 3,
+    id: "rep_3",
     lat: 28.61,
     lng: 77.215,
     title: "Waterlogging CP",
@@ -59,7 +61,7 @@ const initialMockReports = [
     },
   },
   {
-    id: 4,
+    id: "rep_4",
     lat: 28.615,
     lng: 77.21,
     title: "Roadwork CP",
@@ -75,7 +77,7 @@ const initialMockReports = [
     },
   },
   {
-    id: 5,
+    id: "rep_5",
     lat: 28.612,
     lng: 77.208,
     title: "Pothole CP",
@@ -90,9 +92,8 @@ const initialMockReports = [
       profilePic: "https://randomuser.me/api/portraits/men/22.jpg",
     },
   },
-
   {
-    id: 6,
+    id: "rep_6",
     lat: 19.076,
     lng: 72.8777,
     title: "Pothole on Linking Road",
@@ -107,7 +108,7 @@ const initialMockReports = [
     },
   },
   {
-    id: 7,
+    id: "rep_7",
     lat: 19.08,
     lng: 72.88,
     title: "Traffic jam",
@@ -122,7 +123,7 @@ const initialMockReports = [
     author: { name: "User", profilePic: null },
   },
   {
-    id: 8,
+    id: "rep_8",
     lat: 19.072,
     lng: 72.875,
     title: "Road block",
@@ -136,9 +137,8 @@ const initialMockReports = [
       profilePic: "https://randomuser.me/api/portraits/men/51.jpg",
     },
   },
-
   {
-    id: 9,
+    id: "rep_9",
     lat: 12.9716,
     lng: 77.5946,
     title: "Water logging in Koramangala",
@@ -154,7 +154,7 @@ const initialMockReports = [
     },
   },
   {
-    id: 10,
+    id: "rep_10",
     lat: 22.5726,
     lng: 88.3639,
     title: "Accident reported",
@@ -169,7 +169,7 @@ const initialMockReports = [
     },
   },
   {
-    id: 11,
+    id: "rep_11",
     lat: 13.0827,
     lng: 80.2707,
     title: "Road construction",
@@ -187,7 +187,7 @@ const initialMockReports = [
 
 const initialMockEvents = [
   {
-    id: 201,
+    id: "ev_201",
     lat: 28.62,
     lng: 77.2,
     title: "Delhi Music Festival",
@@ -210,7 +210,7 @@ const initialMockEvents = [
     },
   },
   {
-    id: 202,
+    id: "ev_202",
     lat: 19.07,
     lng: 72.87,
     title: "Tech Innovators Conference",
@@ -231,7 +231,7 @@ const initialMockEvents = [
     },
   },
   {
-    id: 203,
+    id: "ev_203",
     lat: 12.97,
     lng: 77.59,
     title: "Bangalore Food Carnival",
@@ -252,7 +252,7 @@ const initialMockEvents = [
     },
   },
   {
-    id: 204,
+    id: "ev_204",
     lat: 28.61,
     lng: 77.21,
     title: "Community Park Cleanup",
@@ -268,7 +268,7 @@ const initialMockEvents = [
     author: { name: "User", profilePic: null },
   },
   {
-    id: 205,
+    id: "ev_205",
     lat: 28.65,
     lng: 77.23,
     title: "Local Book Club Meetup",
@@ -286,7 +286,6 @@ const initialMockEvents = [
 ];
 
 function HomePage() {
-  const [isExploring, setIsExploring] = useState(false);
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -294,50 +293,18 @@ function HomePage() {
   const [toastMessage, setToastMessage] = useState(null);
   const [toastType, setToastType] = useState("success");
 
-  React.useEffect(() => {
-    if (darkMode) {
-      document.body.classList.remove("light-mode");
-    } else {
-      document.body.classList.add("light-mode");
-    }
-  }, [darkMode]);
-
-  const showToast = (message, type = "success") => {
-    setToastMessage(message);
-    setToastType(type);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
-  };
-
   const [reports, setReports] = useState(initialMockReports);
   const [events, setEvents] = useState(initialMockEvents);
-
-  // Calculate initial stats based on mock data that is mine
-  const initialUserStats = initialMockReports
-    .filter((r) => r.isMine)
-    .reduce(
-      (acc, curr) => ({
-        totalUpvotes: acc.totalUpvotes + (curr.upvotes || 0),
-        totalDownvotes: acc.totalDownvotes + (curr.downvotes || 0),
-      }),
-      { totalUpvotes: 0, totalDownvotes: 0 },
-    );
-
-  const [userStats, setUserStats] = useState(initialUserStats);
+  const [userStats, setUserStats] = useState({ totalUpvotes: 0, totalDownvotes: 0 });
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
+  const [editingEvent, setEditingEvent] = useState(null);
   const [userName, setUserName] = useState("User");
   const [profilePic, setProfilePic] = useState(null);
   const [selectedPublicUser, setSelectedPublicUser] = useState(null);
-  // Registered users state (for mock backend)
-  const [registeredUsers, setRegisteredUsers] = useState([]);
-  // Security state to track blocks and limits
-  const [phoneSecurity, setPhoneSecurity] = useState({});
 
   // Registration form state
   const [registerStep, setRegisterStep] = useState(1);
-  const [generatedRegisterOtp, setGeneratedRegisterOtp] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     age: "",
@@ -350,12 +317,62 @@ function HomePage() {
 
   // Login form state
   const [loginStep, setLoginStep] = useState(1);
-  const [generatedLoginOtp, setGeneratedLoginOtp] = useState("");
   const [loginData, setLoginData] = useState({
     countryCode: "+1",
     phone: "",
     otp: "",
   });
+
+  const showToast = (message, type = "success") => {
+    setToastMessage(message);
+    setToastType(type);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
+  };
+
+  // Fetch initial data & verify session on mount
+  useEffect(() => {
+    // 1. Fetch Reports from backend
+    api.reports.getAll().then((res) => {
+      if (res.success && res.reports && res.reports.length > 0) {
+        setReports(res.reports);
+      }
+    });
+
+    // 2. Fetch Events from backend
+    api.events.getAll().then((res) => {
+      if (res.success && res.events && res.events.length > 0) {
+        setEvents(res.events);
+      }
+    });
+
+    // 3. Verify user session if token exists
+    const token = localStorage.getItem("geopulse_token");
+    if (token) {
+      api.auth.getMe().then((res) => {
+        if (res.success && res.user) {
+          setIsLoggedIn(true);
+          setUserName(res.user.name || "User");
+          setProfilePic(res.user.profilePic || null);
+          if (res.user.stats) {
+            setUserStats(res.user.stats);
+          }
+        } else {
+          localStorage.removeItem("geopulse_token");
+        }
+      });
+    }
+  }, []);
+
+  // Sync theme
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.remove("light-mode");
+    } else {
+      document.body.classList.add("light-mode");
+    }
+  }, [darkMode]);
 
   const handleChange = (e) => {
     setFormData({
@@ -371,131 +388,44 @@ function HomePage() {
     });
   };
 
-  const checkSecurity = (phone, isRequestingOtp = false) => {
-    const today = new Date().toDateString();
-    const current = phoneSecurity[phone] || {
-      failedAttempts: 0,
-      blockUntil: null,
-      otpRequests: 0,
-      lastRequestDate: today,
-    };
-
-    if (current.blockUntil && current.blockUntil > Date.now()) {
-      showToast(
-        `Number blocked for 24 hours due to too many failed attempts.`,
-        "error",
-      );
-      return false;
-    }
-
-    if (current.lastRequestDate !== today) {
-      current.otpRequests = 0;
-    }
-
-    if (isRequestingOtp && current.otpRequests >= 5) {
-      showToast(`Max OTP requests (5) reached for today.`, "error");
-      return false;
-    }
-
-    return true;
-  };
-
-  const recordOtpRequest = (phone) => {
-    const today = new Date().toDateString();
-    setPhoneSecurity((prev) => {
-      const current = prev[phone] || {
-        failedAttempts: 0,
-        blockUntil: null,
-        otpRequests: 0,
-        lastRequestDate: today,
-      };
-      return {
-        ...prev,
-        [phone]: {
-          ...current,
-          otpRequests:
-            current.lastRequestDate === today ? current.otpRequests + 1 : 1,
-          lastRequestDate: today,
-        },
-      };
-    });
-  };
-
-  const recordFailedAttempt = (phone) => {
-    setPhoneSecurity((prev) => {
-      const current = prev[phone] || {
-        failedAttempts: 0,
-        blockUntil: null,
-        otpRequests: 0,
-        lastRequestDate: new Date().toDateString(),
-      };
-      const newFailed = current.failedAttempts + 1;
-      let newBlock = current.blockUntil;
-
-      if (newFailed >= 5) {
-        newBlock = Date.now() + 24 * 60 * 60 * 1000;
-        showToast(
-          `Too many failed attempts. Number blocked for 24 hours.`,
-          "error",
-        );
-      } else {
-        showToast(`Wrong OTP. ${5 - newFailed} attempts left.`, "error");
-      }
-
-      return {
-        ...prev,
-        [phone]: {
-          ...current,
-          failedAttempts: newFailed,
-          blockUntil: newBlock,
-        },
-      };
-    });
-  };
-
-  const resetFailedAttempts = (phone) => {
-    setPhoneSecurity((prev) => {
-      if (!prev[phone]) return prev;
-      return { ...prev, [phone]: { ...prev[phone], failedAttempts: 0 } };
-    });
-  };
-
-  const handleRegisterNext = (e) => {
+  // --- Registration Flow ---
+  const handleRegisterNext = async (e) => {
     e.preventDefault();
     const phoneRegex = /^\d{10}$/;
     if (!phoneRegex.test(formData.phone)) {
-      showToast("Enter correct phone number", "error");
+      showToast("Enter a valid 10-digit phone number", "error");
       return;
     }
-    if (!checkSecurity(formData.phone, true)) return;
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedRegisterOtp(otp);
-    recordOtpRequest(formData.phone);
-    setRegisterStep(2);
-    showToast(`OTP is ${otp}`);
+
+    const res = await api.auth.requestRegisterOtp(formData.phone, formData.countryCode);
+    if (res.success) {
+      setRegisterStep(2);
+      showToast(res.otp ? `OTP sent: ${res.otp}` : "OTP sent to your phone");
+    } else {
+      showToast(res.message || "Failed to send OTP", "error");
+    }
   };
 
-  const handleRegisterResend = () => {
-    if (!checkSecurity(formData.phone, true)) return;
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedRegisterOtp(otp);
-    recordOtpRequest(formData.phone);
-    showToast(`Resent OTP is ${otp}`);
+  const handleRegisterResend = async () => {
+    const res = await api.auth.requestRegisterOtp(formData.phone, formData.countryCode);
+    if (res.success) {
+      showToast(res.otp ? `Resent OTP is ${res.otp}` : "OTP resent");
+    } else {
+      showToast(res.message || "Failed to resend OTP", "error");
+    }
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    if (!checkSecurity(formData.phone)) return;
-
-    if (formData.otp === generatedRegisterOtp) {
-      console.log("Registered User Data:", formData);
-      setRegisteredUsers((prev) => [...prev, formData.phone]);
-      resetFailedAttempts(formData.phone);
-      showToast(`Created account successfully`);
-      setUserName(formData.name || "User");
+    const res = await api.auth.verifyAndRegister(formData);
+    if (res.success && res.token) {
+      localStorage.setItem("geopulse_token", res.token);
+      setIsLoggedIn(true);
+      setUserName(res.user?.name || "User");
+      setProfilePic(res.user?.profilePic || null);
+      if (res.user?.stats) setUserStats(res.user.stats);
       setShowRegistrationModal(false);
       setRegisterStep(1);
-      // Reset form
       setFormData({
         name: "",
         age: "",
@@ -505,72 +435,102 @@ function HomePage() {
         phone: "",
         otp: "",
       });
-      setIsLoggedIn(true);
+      showToast("Account created successfully!");
+      // Refresh reports/events with newly authenticated context
+      api.reports.getAll().then((r) => r.success && setReports(r.reports));
+      api.events.getAll().then((ev) => ev.success && setEvents(ev.events));
     } else {
-      recordFailedAttempt(formData.phone);
+      showToast(res.message || "Registration failed", "error");
     }
   };
 
-  const handleLoginNext = (e) => {
+  // --- Login Flow ---
+  const handleLoginNext = async (e) => {
     e.preventDefault();
     const phoneRegex = /^\d{10}$/;
     if (!phoneRegex.test(loginData.phone)) {
-      showToast("Enter correct phone number", "error");
+      showToast("Enter a valid 10-digit phone number", "error");
       return;
     }
-    if (!registeredUsers.includes(loginData.phone)) {
-      showToast("Phone number not registered. Please register first.", "error");
-      return;
+
+    const res = await api.auth.requestLoginOtp(loginData.phone);
+    if (res.success) {
+      setLoginStep(2);
+      showToast(res.otp ? `OTP is ${res.otp}` : "OTP sent successfully");
+    } else {
+      showToast(res.message || "Login OTP failed", "error");
     }
-    if (!checkSecurity(loginData.phone, true)) return;
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedLoginOtp(otp);
-    recordOtpRequest(loginData.phone);
-    setLoginStep(2);
-    showToast(`OTP is ${otp}`);
   };
 
-  const handleLoginResend = () => {
-    if (!checkSecurity(loginData.phone, true)) return;
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedLoginOtp(otp);
-    recordOtpRequest(loginData.phone);
-    showToast(`Resent OTP is ${otp}`);
+  const handleLoginResend = async () => {
+    const res = await api.auth.requestLoginOtp(loginData.phone);
+    if (res.success) {
+      showToast(res.otp ? `Resent OTP is ${res.otp}` : "OTP resent");
+    } else {
+      showToast(res.message || "Failed to resend OTP", "error");
+    }
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!checkSecurity(loginData.phone)) return;
-
-    if (loginData.otp === generatedLoginOtp) {
-      console.log("Login User Data:", loginData);
-      resetFailedAttempts(loginData.phone);
-      showToast(`Login successfully`);
+    const res = await api.auth.verifyAndLogin(loginData.phone, loginData.otp);
+    if (res.success && res.token) {
+      localStorage.setItem("geopulse_token", res.token);
       setIsLoggedIn(true);
+      setUserName(res.user?.name || "User");
+      setProfilePic(res.user?.profilePic || null);
+      if (res.user?.stats) setUserStats(res.user.stats);
       setShowLoginModal(false);
       setLoginStep(1);
-      // Reset form
       setLoginData({ countryCode: "+1", phone: "", otp: "" });
+      showToast("Logged in successfully!");
+      // Refresh reports/events with newly authenticated context
+      api.reports.getAll().then((r) => r.success && setReports(r.reports));
+      api.events.getAll().then((ev) => ev.success && setEvents(ev.events));
     } else {
-      recordFailedAttempt(loginData.phone);
+      showToast(res.message || "Invalid OTP", "error");
     }
   };
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to log out?")) {
+      localStorage.removeItem("geopulse_token");
       setIsLoggedIn(false);
+      setUserName("User");
+      setProfilePic(null);
+      setUserStats({ totalUpvotes: 0, totalDownvotes: 0 });
       showToast("Logged out successfully!");
+      api.reports.getAll().then((r) => r.success && setReports(r.reports));
+      api.events.getAll().then((ev) => ev.success && setEvents(ev.events));
     }
   };
 
-  const handleVote = (reportId, upDelta, downDelta, newUserVote) => {
-    let reportWasMine = false;
+  // --- Reports Handlers ---
+  const handleAddReport = async (reportData) => {
+    const res = await api.reports.create(reportData);
+    if (res.success && res.report) {
+      setReports((prev) => [res.report, ...prev]);
+      showToast("Report added successfully!");
+    } else {
+      // Fallback
+      const fallbackReport = {
+        ...reportData,
+        id: `rep_${Date.now()}`,
+        upvotes: 0,
+        downvotes: 0,
+        isMine: true,
+        author: { name: userName, profilePic },
+      };
+      setReports((prev) => [fallbackReport, ...prev]);
+      showToast("Report pinned!");
+    }
+  };
+
+  const handleVote = async (reportId, upDelta, downDelta, newUserVote) => {
+    // Optimistic UI update
     setReports((prevReports) =>
       prevReports.map((report) => {
-        if (report.id === reportId) {
-          if (report.isMine) {
-            reportWasMine = true;
-          }
+        if (report.id === reportId || report._id === reportId) {
           return {
             ...report,
             upvotes: Math.max(0, (report.upvotes || 0) + upDelta),
@@ -579,21 +539,72 @@ function HomePage() {
           };
         }
         return report;
-      }),
+      })
     );
 
-    if (reportWasMine) {
-      setUserStats((prev) => ({
-        totalUpvotes: prev.totalUpvotes + upDelta,
-        totalDownvotes: prev.totalDownvotes + downDelta,
-      }));
+    const action = newUserVote === "up" ? "up" : newUserVote === "down" ? "down" : "cancel";
+    const res = await api.reports.vote(reportId, action);
+    if (res.success && res.report) {
+      setReports((prev) =>
+        prev.map((r) => (r.id === reportId || r._id === reportId ? { ...r, ...res.report } : r))
+      );
+    }
+
+    // Refresh user stats
+    api.auth.getMe().then((res) => {
+      if (res.success && res.user?.stats) setUserStats(res.user.stats);
+    });
+  };
+
+  const handleDeleteReport = async (reportId) => {
+    setReports((prev) => prev.filter((r) => r.id !== reportId && r._id !== reportId));
+    await api.reports.delete(reportId);
+    showToast("Report deleted");
+  };
+
+  const submitEditReport = async (updatedData) => {
+    setReports((prev) =>
+      prev.map((r) =>
+        r.id === updatedData.id || r._id === updatedData.id
+          ? { ...r, ...updatedData, upvotes: 0, downvotes: 0, userVote: null }
+          : r
+      )
+    );
+    await api.reports.update(updatedData.id || updatedData._id, updatedData);
+    setEditingReport(null);
+    showToast("Report updated");
+  };
+
+  const handleReportOpened = async (reportId) => {
+    setReports((prev) =>
+      prev.map((r) => (r.id === reportId || r._id === reportId ? { ...r, seen: true } : r))
+    );
+    await api.reports.markSeen(reportId);
+  };
+
+  // --- Events Handlers ---
+  const handleAddEvent = async (eventData) => {
+    const res = await api.events.create(eventData);
+    if (res.success && res.event) {
+      setEvents((prev) => [res.event, ...prev]);
+      showToast("Event created successfully!");
+    } else {
+      const fallbackEvent = {
+        ...eventData,
+        id: `ev_${Date.now()}`,
+        upvotes: 0,
+        isMine: true,
+        author: { name: userName, profilePic },
+      };
+      setEvents((prev) => [fallbackEvent, ...prev]);
+      showToast("Event created!");
     }
   };
 
-  const handleEventVote = (eventId, upDelta, newUserVote) => {
+  const handleEventVote = async (eventId, upDelta, newUserVote) => {
     setEvents((prevEvents) =>
       prevEvents.map((event) => {
-        if (event.id === eventId) {
+        if (event.id === eventId || event._id === eventId) {
           return {
             ...event,
             upvotes: Math.max(0, (event.upvotes || 0) + upDelta),
@@ -601,80 +612,50 @@ function HomePage() {
           };
         }
         return event;
-      }),
+      })
     );
+
+    const action = newUserVote === "up" ? "up" : "cancel";
+    await api.events.vote(eventId, action);
   };
 
-  const handleDeleteReport = (reportId) => {
-    setReports((prev) => prev.filter((r) => r.id !== reportId));
-    // Note: userStats is INTENTIONALLY not decremented here as per user request
+  const handleDeleteEvent = async (eventId) => {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId && e._id !== eventId));
+    await api.events.delete(eventId);
+    showToast("Event deleted");
   };
 
-  const handleDeleteEvent = (eventId) => {
-    setEvents((prev) => prev.filter((e) => e.id !== eventId));
-  };
-
-  const handleEditReport = (report) => {
-    setEditingReport(report);
-  };
-
-  const [editingEvent, setEditingEvent] = useState(null);
-
-  const handleEditEvent = (event) => {
-    setEditingEvent(event);
-  };
-
-  const submitEditReport = (updatedData) => {
-    setReports((prev) => {
-      let oldUpvotes = 0;
-      let oldDownvotes = 0;
-      let wasMine = false;
-
-      const newReports = prev.map((r) => {
-        if (r.id === updatedData.id) {
-          oldUpvotes = r.upvotes || 0;
-          oldDownvotes = r.downvotes || 0;
-          wasMine = r.isMine;
-          return {
-            ...r,
-            ...updatedData,
-            upvotes: 0,
-            downvotes: 0,
-            userVote: null,
-          };
-        }
-        return r;
-      });
-
-      if (wasMine && (oldUpvotes > 0 || oldDownvotes > 0)) {
-        setUserStats((stats) => ({
-          totalUpvotes: Math.max(0, stats.totalUpvotes - oldUpvotes),
-          totalDownvotes: Math.max(0, stats.totalDownvotes - oldDownvotes),
-        }));
-      }
-
-      return newReports;
-    });
-    setEditingReport(null);
-  };
-
-  const submitEditEvent = (updatedData) => {
+  const submitEditEvent = async (updatedData) => {
     setEvents((prev) =>
-      prev.map((e) => (e.id === updatedData.id ? { ...e, ...updatedData } : e)),
+      prev.map((e) =>
+        e.id === updatedData.id || e._id === updatedData.id ? { ...e, ...updatedData } : e
+      )
     );
+    await api.events.update(updatedData.id || updatedData._id, updatedData);
     setEditingEvent(null);
+    showToast("Event updated");
   };
 
-  const handleReportOpened = (reportId) => {
-    setReports((prev) =>
-      prev.map((r) => (r.id === reportId ? { ...r, seen: true } : r)),
-    );
-  };
-
-  const handleEventOpened = (eventId) => {
+  const handleEventOpened = async (eventId) => {
     setEvents((prev) =>
-      prev.map((e) => (e.id === eventId ? { ...e, seen: true } : e)),
+      prev.map((e) => (e.id === eventId || e._id === eventId ? { ...e, seen: true } : e))
     );
+    await api.events.markSeen(eventId);
+  };
+
+  // --- Profile Updates ---
+  const handleUpdateUserName = async (newName) => {
+    setUserName(newName);
+    if (isLoggedIn) {
+      await api.auth.updateProfile({ name: newName });
+    }
+  };
+
+  const handleUpdateProfilePic = async (newPic) => {
+    setProfilePic(newPic);
+    if (isLoggedIn) {
+      await api.auth.updateProfile({ profilePic: newPic });
+    }
   };
 
   return (
@@ -697,13 +678,15 @@ function HomePage() {
           setReports={setReports}
           events={events}
           setEvents={setEvents}
+          onAddReport={handleAddReport}
+          onAddEvent={handleAddEvent}
           onVote={handleVote}
           onEventVote={handleEventVote}
           onReportOpened={handleReportOpened}
           onEventOpened={handleEventOpened}
           onAuthorClick={(user) => setSelectedPublicUser(user)}
           userName={userName}
-          setUserName={setUserName}
+          setUserName={handleUpdateUserName}
           isDarkMode={darkMode}
           setDarkMode={setDarkMode}
         />
@@ -768,12 +751,12 @@ function HomePage() {
         events={events}
         onDelete={handleDeleteReport}
         onDeleteEvent={handleDeleteEvent}
-        onEdit={handleEditReport}
-        onEditEvent={handleEditEvent}
+        onEdit={(rep) => setEditingReport(rep)}
+        onEditEvent={(ev) => setEditingEvent(ev)}
         userName={userName}
-        setUserName={setUserName}
+        setUserName={handleUpdateUserName}
         profilePic={profilePic}
-        setProfilePic={setProfilePic}
+        setProfilePic={handleUpdateProfilePic}
       />
 
       {selectedPublicUser && (
