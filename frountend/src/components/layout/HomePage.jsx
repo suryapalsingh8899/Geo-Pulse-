@@ -398,7 +398,8 @@ function HomePage() {
       return;
     }
 
-    const fullPhone = `${formData.countryCode || "+91"}${formData.phone}`;
+    const cleanPhone = (formData.phone || "").replace(/\D/g, "");
+    const fullPhone = `${formData.countryCode || "+91"}${cleanPhone}`;
     showToast("Sending SMS OTP to your phone...", "info");
 
     const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
@@ -418,7 +419,8 @@ function HomePage() {
   };
 
   const handleRegisterResend = async () => {
-    const fullPhone = `${formData.countryCode || "+91"}${formData.phone}`;
+    const cleanPhone = (formData.phone || "").replace(/\D/g, "");
+    const fullPhone = `${formData.countryCode || "+91"}${cleanPhone}`;
     const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
     if (fbRes.success) {
       showToast("SMS OTP resent to your phone!");
@@ -479,7 +481,8 @@ function HomePage() {
       return;
     }
 
-    const fullPhone = `${loginData.countryCode || "+91"}${loginData.phone}`;
+    const cleanPhone = (loginData.phone || "").replace(/\D/g, "");
+    const fullPhone = `${loginData.countryCode || "+91"}${cleanPhone}`;
     showToast("Sending SMS OTP to your phone...", "info");
 
     const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
@@ -499,7 +502,8 @@ function HomePage() {
   };
 
   const handleLoginResend = async () => {
-    const fullPhone = `${loginData.countryCode || "+91"}${loginData.phone}`;
+    const cleanPhone = (loginData.phone || "").replace(/\D/g, "");
+    const fullPhone = `${loginData.countryCode || "+91"}${cleanPhone}`;
     const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
     if (fbRes.success) {
       showToast("SMS OTP resent to your phone!");

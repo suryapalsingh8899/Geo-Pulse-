@@ -17,20 +17,24 @@ export const auth = getAuth(app);
 
 // Helper to set up invisible Recaptcha Verifier
 export const setupRecaptcha = (containerId = "recaptcha-container") => {
-  if (!window.recaptchaVerifier) {
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
-      size: "invisible",
-      callback: () => {
-        // reCAPTCHA solved - allow signInWithPhoneNumber
-      },
-      "expired-callback": () => {
-        if (window.recaptchaVerifier) {
-          window.recaptchaVerifier.clear();
-          window.recaptchaVerifier = null;
-        }
-      }
-    });
+  if (window.recaptchaVerifier) {
+    try {
+      window.recaptchaVerifier.clear();
+    } catch (e) {}
+    window.recaptchaVerifier = null;
   }
+  window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+    size: "invisible",
+    callback: () => {
+      // reCAPTCHA solved - allow signInWithPhoneNumber
+    },
+    "expired-callback": () => {
+      if (window.recaptchaVerifier) {
+        try { window.recaptchaVerifier.clear(); } catch (e) {}
+        window.recaptchaVerifier = null;
+      }
+    }
+  });
   return window.recaptchaVerifier;
 };
 

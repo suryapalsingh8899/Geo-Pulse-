@@ -356,8 +356,8 @@ const LoginButton = ({
                     value={loginData.otp}
                     onChange={onChange}
                     required
-                    placeholder="Enter OTP"
-                    maxLength="4"
+                    placeholder="Enter 6-digit OTP"
+                    maxLength="6"
                     style={{
                       textAlign: "center",
                       letterSpacing: "0.5rem",
