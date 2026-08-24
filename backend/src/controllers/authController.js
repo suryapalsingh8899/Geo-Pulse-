@@ -154,12 +154,36 @@ export const verifyAndRegister = async (req, res) => {
     current.tempOtp = null;
     tempSecurityStore.set(phone, current);
 
+    const trimmedName = (name || "User").trim();
+
+    // Check for unique username (case-insensitive)
+    if (trimmedName && trimmedName.toLowerCase() !== "user") {
+      let nameTaken = false;
+      if (isMongoConnected) {
+        const existingName = await User.findOne({
+          name: { $regex: new RegExp(`^${trimmedName}$`, "i") },
+        });
+        if (existingName) nameTaken = true;
+      } else {
+        nameTaken = memoryStore.users.some(
+          (u) => u.name?.toLowerCase() === trimmedName.toLowerCase()
+        );
+      }
+
+      if (nameTaken) {
+        return res.status(400).json({
+          success: false,
+          message: `Username "${trimmedName}" is already taken. Please choose a different username.`,
+        });
+      }
+    }
+
     let user;
     if (isMongoConnected) {
       user = await User.create({
         phone,
         countryCode,
-        name: name || "User",
+        name: trimmedName,
         age,
         gender,
         country,
@@ -407,7 +431,33 @@ export const updateProfile = async (req, res) => {
 
     const { name, bio, profilePic, age, gender, country } = req.body;
 
-    if (name !== undefined) user.name = name;
+    if (name !== undefined) {
+      const trimmedName = name.trim();
+      if (trimmedName && trimmedName.toLowerCase() !== user.name?.toLowerCase()) {
+        let nameTaken = false;
+        if (isMongoConnected) {
+          const existing = await User.findOne({
+            _id: { $ne: user._id },
+            name: { $regex: new RegExp(`^${trimmedName}$`, "i") },
+          });
+          if (existing) nameTaken = true;
+        } else {
+          nameTaken = memoryStore.users.some(
+            (u) =>
+              (u._id || u.id)?.toString() !== userId.toString() &&
+              u.name?.toLowerCase() === trimmedName.toLowerCase()
+          );
+        }
+
+        if (nameTaken) {
+          return res.status(400).json({
+            success: false,
+            message: `Username "${trimmedName}" is already taken. Please choose another one.`,
+          });
+        }
+      }
+      user.name = trimmedName;
+    }
     if (bio !== undefined) user.bio = bio;
     if (profilePic !== undefined) user.profilePic = profilePic;
     if (age !== undefined) user.age = age;

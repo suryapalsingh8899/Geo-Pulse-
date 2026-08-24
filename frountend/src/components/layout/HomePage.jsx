@@ -645,9 +645,19 @@ function HomePage() {
 
   // --- Profile Updates ---
   const handleUpdateUserName = async (newName) => {
-    setUserName(newName);
     if (isLoggedIn) {
-      await api.auth.updateProfile({ name: newName });
+      const res = await api.auth.updateProfile({ name: newName });
+      if (res.success && res.user) {
+        setUserName(res.user.name);
+        showToast("Username updated!");
+        return true;
+      } else {
+        showToast(res.message || "Username already taken", "error");
+        return false;
+      }
+    } else {
+      setUserName(newName);
+      return true;
     }
   };
 
