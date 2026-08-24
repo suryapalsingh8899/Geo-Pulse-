@@ -10,6 +10,7 @@ import AddReportModal from "../modals/AddReportModal";
 import AddEventModal from "../modals/AddEventModal";
 import PublicProfileModal from "../modals/PublicProfileModal";
 import api from "../../services/api";
+import { sendFirebaseOtp, verifyFirebaseOtp } from "../../config/firebase";
 
 const initialMockReports = [
   {
@@ -397,27 +398,53 @@ function HomePage() {
       return;
     }
 
-    const res = await api.auth.requestRegisterOtp(formData.phone, formData.countryCode);
-    if (res.success) {
+    const fullPhone = `${formData.countryCode || "+91"}${formData.phone}`;
+    showToast("Sending SMS OTP to your phone...", "info");
+
+    const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
+    if (fbRes.success) {
       setRegisterStep(2);
-      showToast(res.otp ? `OTP sent: ${res.otp}` : "OTP sent to your phone");
+      showToast("SMS OTP sent to your phone!");
     } else {
-      showToast(res.message || "Failed to send OTP", "error");
+      console.warn("Firebase Phone Auth fallback:", fbRes.error);
+      const res = await api.auth.requestRegisterOtp(formData.phone, formData.countryCode);
+      if (res.success) {
+        setRegisterStep(2);
+        showToast(res.otp ? `OTP sent: ${res.otp}` : "OTP sent to your phone");
+      } else {
+        showToast(res.message || fbRes.error || "Failed to send OTP", "error");
+      }
     }
   };
 
   const handleRegisterResend = async () => {
-    const res = await api.auth.requestRegisterOtp(formData.phone, formData.countryCode);
-    if (res.success) {
-      showToast(res.otp ? `Resent OTP is ${res.otp}` : "OTP resent");
+    const fullPhone = `${formData.countryCode || "+91"}${formData.phone}`;
+    const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
+    if (fbRes.success) {
+      showToast("SMS OTP resent to your phone!");
     } else {
-      showToast(res.message || "Failed to resend OTP", "error");
+      const res = await api.auth.requestRegisterOtp(formData.phone, formData.countryCode);
+      if (res.success) {
+        showToast(res.otp ? `Resent OTP is ${res.otp}` : "OTP resent");
+      } else {
+        showToast(res.message || "Failed to resend OTP", "error");
+      }
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    const res = await api.auth.verifyAndRegister(formData);
+    showToast("Verifying OTP...", "info");
+
+    let res;
+    const fbVerify = await verifyFirebaseOtp(formData.otp);
+    if (fbVerify.success) {
+      res = await api.auth.firebaseRegister(formData);
+    } else {
+      // Fallback verification
+      res = await api.auth.verifyAndRegister(formData);
+    }
+
     if (res.success && res.token) {
       localStorage.setItem("geopulse_token", res.token);
       setIsLoggedIn(true);
@@ -431,12 +458,11 @@ function HomePage() {
         age: "",
         gender: "",
         country: "",
-        countryCode: "+1",
+        countryCode: "+91",
         phone: "",
         otp: "",
       });
       showToast("Account created successfully!");
-      // Refresh reports/events with newly authenticated context
       api.reports.getAll().then((r) => r.success && setReports(r.reports));
       api.events.getAll().then((ev) => ev.success && setEvents(ev.events));
     } else {
@@ -453,27 +479,53 @@ function HomePage() {
       return;
     }
 
-    const res = await api.auth.requestLoginOtp(loginData.phone);
-    if (res.success) {
+    const fullPhone = `${loginData.countryCode || "+91"}${loginData.phone}`;
+    showToast("Sending SMS OTP to your phone...", "info");
+
+    const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
+    if (fbRes.success) {
       setLoginStep(2);
-      showToast(res.otp ? `OTP is ${res.otp}` : "OTP sent successfully");
+      showToast("SMS OTP sent to your phone!");
     } else {
-      showToast(res.message || "Login OTP failed", "error");
+      console.warn("Firebase Phone Auth fallback:", fbRes.error);
+      const res = await api.auth.requestLoginOtp(loginData.phone);
+      if (res.success) {
+        setLoginStep(2);
+        showToast(res.otp ? `OTP is ${res.otp}` : "OTP sent successfully");
+      } else {
+        showToast(res.message || fbRes.error || "Login OTP failed", "error");
+      }
     }
   };
 
   const handleLoginResend = async () => {
-    const res = await api.auth.requestLoginOtp(loginData.phone);
-    if (res.success) {
-      showToast(res.otp ? `Resent OTP is ${res.otp}` : "OTP resent");
+    const fullPhone = `${loginData.countryCode || "+91"}${loginData.phone}`;
+    const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
+    if (fbRes.success) {
+      showToast("SMS OTP resent to your phone!");
     } else {
-      showToast(res.message || "Failed to resend OTP", "error");
+      const res = await api.auth.requestLoginOtp(loginData.phone);
+      if (res.success) {
+        showToast(res.otp ? `Resent OTP is ${res.otp}` : "OTP resent");
+      } else {
+        showToast(res.message || "Failed to resend OTP", "error");
+      }
     }
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    const res = await api.auth.verifyAndLogin(loginData.phone, loginData.otp);
+    showToast("Verifying OTP...", "info");
+
+    let res;
+    const fbVerify = await verifyFirebaseOtp(loginData.otp);
+    if (fbVerify.success) {
+      res = await api.auth.firebaseLogin(loginData.phone);
+    } else {
+      // Fallback verification
+      res = await api.auth.verifyAndLogin(loginData.phone, loginData.otp);
+    }
+
     if (res.success && res.token) {
       localStorage.setItem("geopulse_token", res.token);
       setIsLoggedIn(true);
@@ -482,9 +534,8 @@ function HomePage() {
       if (res.user?.stats) setUserStats(res.user.stats);
       setShowLoginModal(false);
       setLoginStep(1);
-      setLoginData({ countryCode: "+1", phone: "", otp: "" });
+      setLoginData({ countryCode: "+91", phone: "", otp: "" });
       showToast("Logged in successfully!");
-      // Refresh reports/events with newly authenticated context
       api.reports.getAll().then((r) => r.success && setReports(r.reports));
       api.events.getAll().then((ev) => ev.success && setEvents(ev.events));
     } else {
@@ -831,6 +882,9 @@ function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Invisible container for Firebase Phone Auth reCAPTCHA */}
+      <div id="recaptcha-container"></div>
     </div>
   );
 }

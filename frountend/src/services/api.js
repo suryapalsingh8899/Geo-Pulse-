@@ -59,6 +59,18 @@ export const api = {
         body: JSON.stringify({ phone, otp }),
       }),
 
+    firebaseRegister: (payload) =>
+      request("/auth/firebase-register", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+
+    firebaseLogin: (phone) =>
+      request("/auth/firebase-login", {
+        method: "POST",
+        body: JSON.stringify({ phone }),
+      }),
+
     getMe: () => request("/auth/me"),
 
     updateProfile: (profileData) =>

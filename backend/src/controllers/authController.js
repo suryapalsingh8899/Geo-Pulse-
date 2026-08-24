@@ -534,20 +534,170 @@ export const getUserProfile = async (req, res) => {
       eventsCount = memoryStore.events.filter((e) => e.author?.user?.toString() === user._id?.toString() || e.author?.name === user.name).length;
     }
 
-    return res.status(200).json({
+      return res.status(200).json({
+        success: true,
+        user: {
+          id: user._id || user.id,
+          name: user.name,
+          profilePic: user.profilePic,
+          bio: user.bio,
+          country: user.country,
+          stats: user.stats,
+          reportsCount,
+          eventsCount,
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  };
+
+// @desc    Register user verified via Firebase Phone Auth
+// @route   POST /api/auth/firebase-register
+// @access  Public
+export const firebaseRegister = async (req, res) => {
+  try {
+    const { phone, name, countryCode = "+91", age = "", gender = "", country = "" } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ success: false, message: "Phone number is required" });
+    }
+
+    const cleanPhone = phone.toString().replace(/\D/g, "").slice(-10);
+
+    const existingUser = await findUserByPhone(cleanPhone);
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is already registered. Please login instead.",
+      });
+    }
+
+    const trimmedName = (name || "User").trim();
+
+    // Strict Unique Username check (case-insensitive)
+    if (trimmedName && trimmedName.toLowerCase() !== "user") {
+      let nameTaken = false;
+      if (isMongoConnected) {
+        const existingName = await User.findOne({
+          name: { $regex: new RegExp(`^${trimmedName}$`, "i") },
+        });
+        if (existingName) nameTaken = true;
+      } else {
+        nameTaken = memoryStore.users.some(
+          (u) => u.name?.toLowerCase() === trimmedName.toLowerCase()
+        );
+      }
+
+      if (nameTaken) {
+        return res.status(400).json({
+          success: false,
+          message: `Username "${trimmedName}" is already taken. Please choose a different username.`,
+        });
+      }
+    }
+
+    let user;
+    if (isMongoConnected) {
+      user = await User.create({
+        phone: cleanPhone,
+        countryCode,
+        name: trimmedName,
+        age,
+        gender,
+        country,
+        stats: { totalUpvotes: 0, totalDownvotes: 0 },
+      });
+    } else {
+      user = {
+        _id: `user_${Date.now()}`,
+        id: `user_${Date.now()}`,
+        phone: cleanPhone,
+        countryCode,
+        name: trimmedName,
+        age,
+        gender,
+        country,
+        profilePic: null,
+        bio: "",
+        stats: { totalUpvotes: 0, totalDownvotes: 0 },
+        failedAttempts: 0,
+        blockUntil: null,
+        otpRequests: 0,
+        lastRequestDate: new Date().toDateString(),
+      };
+      memoryStore.users.push(user);
+    }
+
+    const token = generateToken(user._id || user.id);
+
+    return res.status(201).json({
       success: true,
+      message: "Account created successfully via Firebase",
+      token,
       user: {
         id: user._id || user.id,
+        phone: user.phone,
+        countryCode: user.countryCode,
         name: user.name,
+        age: user.age,
+        gender: user.gender,
+        country: user.country,
         profilePic: user.profilePic,
         bio: user.bio,
-        country: user.country,
         stats: user.stats,
-        reportsCount,
-        eventsCount,
       },
     });
   } catch (error) {
+    console.error("Firebase register error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Login user verified via Firebase Phone Auth
+// @route   POST /api/auth/firebase-login
+// @access  Public
+export const firebaseLogin = async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ success: false, message: "Phone number is required" });
+    }
+
+    const cleanPhone = phone.toString().replace(/\D/g, "").slice(-10);
+
+    const user = await findUserByPhone(cleanPhone);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        notRegistered: true,
+        message: "Phone number not registered. Please register first.",
+      });
+    }
+
+    const token = generateToken(user._id || user.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful via Firebase",
+      token,
+      user: {
+        id: user._id || user.id,
+        phone: user.phone,
+        countryCode: user.countryCode,
+        name: user.name,
+        age: user.age,
+        gender: user.gender,
+        country: user.country,
+        profilePic: user.profilePic,
+        bio: user.bio,
+        stats: user.stats,
+      },
+    });
+  } catch (error) {
+    console.error("Firebase login error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
