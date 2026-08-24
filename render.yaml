@@ -14,6 +14,8 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+      - key: CLIENT_URL
+        value: "*"
 
   # 2. Frontend Static Site
   - type: web
@@ -29,8 +31,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: geopulse-backend
-          property: host
-          value: https://geopulse-backend.onrender.com/api
+        value: https://geopulse-backend.onrender.com/api
