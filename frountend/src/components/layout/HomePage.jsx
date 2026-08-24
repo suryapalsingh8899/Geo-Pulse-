@@ -402,18 +402,20 @@ function HomePage() {
     const fullPhone = `${formData.countryCode || "+91"}${cleanPhone}`;
     showToast("Sending SMS OTP to your phone...", "info");
 
+    // Request backend OTP first to guarantee SMS dispatch & instant toast fallback code
+    const backendRes = await api.auth.requestRegisterOtp(formData.phone, formData.countryCode);
+
     const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
     if (fbRes.success) {
       setRegisterStep(2);
-      showToast("SMS OTP sent to your phone!");
+      showToast(backendRes.otp ? `SMS OTP sent! (Code: ${backendRes.otp})` : "SMS OTP sent to your phone!");
     } else {
       console.warn("Firebase Phone Auth fallback:", fbRes.error);
-      const res = await api.auth.requestRegisterOtp(formData.phone, formData.countryCode);
-      if (res.success) {
+      if (backendRes.success) {
         setRegisterStep(2);
-        showToast(res.otp ? `OTP sent: ${res.otp}` : "OTP sent to your phone");
+        showToast(backendRes.otp ? `OTP Code: ${backendRes.otp}` : "OTP sent to your phone");
       } else {
-        showToast(res.message || fbRes.error || "Failed to send OTP", "error");
+        showToast(backendRes.message || fbRes.error || "Failed to send OTP", "error");
       }
     }
   };
@@ -421,16 +423,12 @@ function HomePage() {
   const handleRegisterResend = async () => {
     const cleanPhone = (formData.phone || "").replace(/\D/g, "");
     const fullPhone = `${formData.countryCode || "+91"}${cleanPhone}`;
+    const backendRes = await api.auth.requestRegisterOtp(formData.phone, formData.countryCode);
     const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
-    if (fbRes.success) {
-      showToast("SMS OTP resent to your phone!");
+    if (fbRes.success || backendRes.success) {
+      showToast(backendRes.otp ? `Resent OTP: ${backendRes.otp}` : "SMS OTP resent to your phone!");
     } else {
-      const res = await api.auth.requestRegisterOtp(formData.phone, formData.countryCode);
-      if (res.success) {
-        showToast(res.otp ? `Resent OTP is ${res.otp}` : "OTP resent");
-      } else {
-        showToast(res.message || "Failed to resend OTP", "error");
-      }
+      showToast(backendRes.message || "Failed to resend OTP", "error");
     }
   };
 
@@ -485,18 +483,18 @@ function HomePage() {
     const fullPhone = `${loginData.countryCode || "+91"}${cleanPhone}`;
     showToast("Sending SMS OTP to your phone...", "info");
 
+    const backendRes = await api.auth.requestLoginOtp(loginData.phone);
     const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
     if (fbRes.success) {
       setLoginStep(2);
-      showToast("SMS OTP sent to your phone!");
+      showToast(backendRes.otp ? `SMS OTP sent! (Code: ${backendRes.otp})` : "SMS OTP sent to your phone!");
     } else {
       console.warn("Firebase Phone Auth fallback:", fbRes.error);
-      const res = await api.auth.requestLoginOtp(loginData.phone);
-      if (res.success) {
+      if (backendRes.success) {
         setLoginStep(2);
-        showToast(res.otp ? `OTP is ${res.otp}` : "OTP sent successfully");
+        showToast(backendRes.otp ? `OTP Code: ${backendRes.otp}` : "OTP sent successfully");
       } else {
-        showToast(res.message || fbRes.error || "Login OTP failed", "error");
+        showToast(backendRes.message || fbRes.error || "Login OTP failed", "error");
       }
     }
   };
@@ -504,16 +502,12 @@ function HomePage() {
   const handleLoginResend = async () => {
     const cleanPhone = (loginData.phone || "").replace(/\D/g, "");
     const fullPhone = `${loginData.countryCode || "+91"}${cleanPhone}`;
+    const backendRes = await api.auth.requestLoginOtp(loginData.phone);
     const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
-    if (fbRes.success) {
-      showToast("SMS OTP resent to your phone!");
+    if (fbRes.success || backendRes.success) {
+      showToast(backendRes.otp ? `Resent OTP: ${backendRes.otp}` : "SMS OTP resent to your phone!");
     } else {
-      const res = await api.auth.requestLoginOtp(loginData.phone);
-      if (res.success) {
-        showToast(res.otp ? `Resent OTP is ${res.otp}` : "OTP resent");
-      } else {
-        showToast(res.message || "Failed to resend OTP", "error");
-      }
+      showToast(backendRes.message || "Failed to resend OTP", "error");
     }
   };
 
