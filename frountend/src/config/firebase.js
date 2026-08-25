@@ -20,7 +20,7 @@ export const setupRecaptcha = (containerId = "recaptcha-container") => {
   if (window.recaptchaVerifier) {
     try {
       window.recaptchaVerifier.clear();
-    } catch (e) {}
+    } catch (e) { }
     window.recaptchaVerifier = null;
   }
   window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
@@ -30,7 +30,7 @@ export const setupRecaptcha = (containerId = "recaptcha-container") => {
     },
     "expired-callback": () => {
       if (window.recaptchaVerifier) {
-        try { window.recaptchaVerifier.clear(); } catch (e) {}
+        try { window.recaptchaVerifier.clear(); } catch (e) { }
         window.recaptchaVerifier = null;
       }
     }
@@ -50,7 +50,7 @@ export const sendFirebaseOtp = async (fullPhoneNumber, containerId = "recaptcha-
     if (window.recaptchaVerifier) {
       try {
         window.recaptchaVerifier.clear();
-      } catch (e) {}
+      } catch (e) { }
       window.recaptchaVerifier = null;
     }
     return { success: false, error: error.message };
