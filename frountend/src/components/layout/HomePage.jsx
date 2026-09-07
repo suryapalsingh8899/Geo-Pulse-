@@ -10,7 +10,6 @@ import AddReportModal from "../modals/AddReportModal";
 import AddEventModal from "../modals/AddEventModal";
 import PublicProfileModal from "../modals/PublicProfileModal";
 import api from "../../services/api";
-import { sendFirebaseOtp, verifyFirebaseOtp } from "../../config/firebase";
 
 const initialMockReports = [
   {
@@ -327,9 +326,11 @@ function HomePage() {
   const showToast = (message, type = "success") => {
     setToastMessage(message);
     setToastType(type);
+    // Give more time for OTP-related messages so user can read/copy the code
+    const duration = message?.includes("OTP code is") ? 12000 : 3500;
     setTimeout(() => {
       setToastMessage(null);
-    }, 3500);
+    }, duration);
   };
 
   // Fetch initial data & verify session on mount
@@ -389,7 +390,7 @@ function HomePage() {
     });
   };
 
-  // --- Registration Flow (Firebase Phone Auth Only) ---
+  // --- Registration Flow (Backend SMS Auth) ---
   const handleRegisterNext = async (e) => {
     e.preventDefault();
     const phoneRegex = /^\d{10}$/;
@@ -399,41 +400,35 @@ function HomePage() {
     }
 
     const cleanPhone = (formData.phone || "").replace(/\D/g, "");
-    const fullPhone = `${formData.countryCode || "+91"}${cleanPhone}`;
     showToast("Sending SMS OTP to your phone...", "info");
 
-    const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
-    if (fbRes.success) {
+    const res = await api.auth.requestRegisterOtp(cleanPhone, formData.countryCode);
+    if (res.success) {
       setRegisterStep(2);
       showToast("OTP sent to your phone via SMS!");
     } else {
-      console.error("Firebase Phone Auth error:", fbRes.error);
-      showToast(fbRes.error || "Failed to send OTP. Please try again.", "error");
+      console.error("Register OTP error:", res.message);
+      showToast(res.message || "Failed to send OTP. Please try again.", "error");
     }
   };
 
   const handleRegisterResend = async () => {
     const cleanPhone = (formData.phone || "").replace(/\D/g, "");
-    const fullPhone = `${formData.countryCode || "+91"}${cleanPhone}`;
-    const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
-    if (fbRes.success) {
+    showToast("Resending OTP...", "info");
+    const res = await api.auth.requestRegisterOtp(cleanPhone, formData.countryCode);
+    if (res.success) {
       showToast("OTP resent to your phone!");
     } else {
-      showToast(fbRes.error || "Failed to resend OTP", "error");
+      showToast(res.message || "Failed to resend OTP", "error");
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    showToast("Verifying OTP...", "info");
+    showToast("Verifying OTP & Registering...", "info");
 
-    const fbVerify = await verifyFirebaseOtp(formData.otp);
-    if (!fbVerify.success) {
-      showToast(fbVerify.error || "Invalid OTP. Please try again.", "error");
-      return;
-    }
-
-    const res = await api.auth.firebaseRegister(formData);
+    const payload = { ...formData, phone: formData.phone.replace(/\D/g, "") };
+    const res = await api.auth.verifyAndRegister(payload);
 
     if (res.success && res.token) {
       localStorage.setItem("geopulse_token", res.token);
@@ -460,7 +455,7 @@ function HomePage() {
     }
   };
 
-  // --- Login Flow (Firebase Phone Auth Only) ---
+  // --- Login Flow (Backend SMS Auth) ---
   const handleLoginNext = async (e) => {
     e.preventDefault();
     const phoneRegex = /^\d{10}$/;
@@ -470,41 +465,35 @@ function HomePage() {
     }
 
     const cleanPhone = (loginData.phone || "").replace(/\D/g, "");
-    const fullPhone = `${loginData.countryCode || "+91"}${cleanPhone}`;
     showToast("Sending SMS OTP to your phone...", "info");
 
-    const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
-    if (fbRes.success) {
+    const res = await api.auth.requestLoginOtp(cleanPhone);
+    if (res.success) {
       setLoginStep(2);
       showToast("OTP sent to your phone via SMS!");
     } else {
-      console.error("Firebase Phone Auth error:", fbRes.error);
-      showToast(fbRes.error || "Failed to send OTP. Please try again.", "error");
+      console.error("Login OTP error:", res.message);
+      showToast(res.message || "Failed to send OTP. Please try again.", "error");
     }
   };
 
   const handleLoginResend = async () => {
     const cleanPhone = (loginData.phone || "").replace(/\D/g, "");
-    const fullPhone = `${loginData.countryCode || "+91"}${cleanPhone}`;
-    const fbRes = await sendFirebaseOtp(fullPhone, "recaptcha-container");
-    if (fbRes.success) {
+    showToast("Resending OTP...", "info");
+    const res = await api.auth.requestLoginOtp(cleanPhone);
+    if (res.success) {
       showToast("OTP resent to your phone!");
     } else {
-      showToast(fbRes.error || "Failed to resend OTP", "error");
+      showToast(res.message || "Failed to resend OTP", "error");
     }
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    showToast("Verifying OTP...", "info");
+    showToast("Verifying OTP & Logging in...", "info");
 
-    const fbVerify = await verifyFirebaseOtp(loginData.otp);
-    if (!fbVerify.success) {
-      showToast(fbVerify.error || "Invalid OTP. Please try again.", "error");
-      return;
-    }
-
-    const res = await api.auth.firebaseLogin(loginData.phone);
+    const cleanPhone = (loginData.phone || "").replace(/\D/g, "");
+    const res = await api.auth.verifyAndLogin(cleanPhone, loginData.otp);
 
     if (res.success && res.token) {
       localStorage.setItem("geopulse_token", res.token);

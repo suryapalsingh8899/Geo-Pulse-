@@ -47,13 +47,30 @@ export const sendFirebaseOtp = async (fullPhoneNumber, containerId = "recaptcha-
     return { success: true, confirmationResult };
   } catch (error) {
     console.error("Firebase sendOtp error:", error);
+    console.error("Firebase error code:", error.code);
+    console.error("Firebase error message:", error.message);
+    
+    // Provide user-friendly error messages based on Firebase error codes
+    let userMessage = error.message;
+    if (error.code === "auth/unauthorized-domain") {
+      userMessage = "This domain is not authorized in Firebase. Add it to Firebase Console → Authentication → Settings → Authorized domains.";
+    } else if (error.code === "auth/operation-not-allowed") {
+      userMessage = "Phone Auth is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → Phone.";
+    } else if (error.code === "auth/too-many-requests") {
+      userMessage = "Too many OTP requests. Please wait a few minutes before trying again.";
+    } else if (error.code === "auth/invalid-phone-number") {
+      userMessage = "Invalid phone number format. Please check and try again.";
+    } else if (error.code === "auth/captcha-check-failed") {
+      userMessage = "reCAPTCHA verification failed. Please refresh the page and try again.";
+    }
+
     if (window.recaptchaVerifier) {
       try {
         window.recaptchaVerifier.clear();
       } catch (e) { }
       window.recaptchaVerifier = null;
     }
-    return { success: false, error: error.message };
+    return { success: false, error: userMessage };
   }
 };
 
