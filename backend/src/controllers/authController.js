@@ -37,10 +37,10 @@ const checkSecurityLimits = (phone) => {
     current.lastRequestDate = today;
   }
 
-  if (current.otpRequests >= 5) {
+  if (current.otpRequests >= 50) {
     return {
       allowed: false,
-      message: "Daily limit of 5 OTP requests reached. Please try again tomorrow.",
+      message: "Daily limit of 50 OTP requests reached. Please try again tomorrow.",
     };
   }
 
@@ -138,7 +138,7 @@ export const verifyAndRegister = async (req, res) => {
     const current = security.data;
     if (!current.tempOtp || current.tempOtp !== otp.toString() || current.tempOtpExpiry < Date.now()) {
       current.failedAttempts += 1;
-      if (current.failedAttempts >= 5) {
+      if (current.failedAttempts >= 50) {
         current.blockUntil = Date.now() + 24 * 60 * 60 * 1000;
         tempSecurityStore.set(phone, current);
         return res.status(403).json({
@@ -149,7 +149,7 @@ export const verifyAndRegister = async (req, res) => {
       tempSecurityStore.set(phone, current);
       return res.status(400).json({
         success: false,
-        message: `Invalid or expired OTP. ${5 - current.failedAttempts} attempts remaining.`,
+        message: `Invalid or expired OTP. ${50 - current.failedAttempts} attempts remaining.`,
       });
     }
 
@@ -271,10 +271,10 @@ export const requestLoginOtp = async (req, res) => {
       user.lastRequestDate = today;
     }
 
-    if (user.otpRequests >= 5) {
+    if (user.otpRequests >= 50) {
       return res.status(429).json({
         success: false,
-        message: "Daily limit of 5 OTP requests reached. Please try again tomorrow.",
+        message: "Daily limit of 50 OTP requests reached. Please try again tomorrow.",
       });
     }
 
@@ -329,7 +329,7 @@ export const verifyAndLogin = async (req, res) => {
 
     if (!user.otp || user.otp !== otp.toString() || !user.otpExpiry || new Date(user.otpExpiry).getTime() < Date.now()) {
       user.failedAttempts = (user.failedAttempts || 0) + 1;
-      if (user.failedAttempts >= 5) {
+      if (user.failedAttempts >= 50) {
         user.blockUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
         if (isMongoConnected) await user.save();
         return res.status(403).json({
@@ -340,7 +340,7 @@ export const verifyAndLogin = async (req, res) => {
       if (isMongoConnected) await user.save();
       return res.status(400).json({
         success: false,
-        message: `Invalid or expired OTP. ${5 - user.failedAttempts} attempts left.`,
+        message: `Invalid or expired OTP. ${50 - user.failedAttempts} attempts left.`,
       });
     }
 
