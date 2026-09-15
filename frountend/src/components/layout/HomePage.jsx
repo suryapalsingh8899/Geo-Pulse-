@@ -474,6 +474,15 @@ function HomePage() {
     } else {
       console.error("Login OTP error:", res.message);
       showToast(res.message || "Failed to send OTP. Please try again.", "error");
+      
+      // Auto-switch to registration if not registered
+      if (res.message && res.message.includes("register")) {
+        setTimeout(() => {
+          setShowLoginModal(false);
+          setFormData(prev => ({ ...prev, phone: loginData.phone }));
+          setShowRegistrationModal(true);
+        }, 1500);
+      }
     }
   };
 

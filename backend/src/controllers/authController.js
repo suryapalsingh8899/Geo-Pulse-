@@ -253,7 +253,7 @@ export const requestLoginOtp = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "Phone number not registered. Please register first.",
+        message: "Phone number not registered. Please register the number first then login.",
       });
     }
 
