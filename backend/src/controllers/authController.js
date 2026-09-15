@@ -105,10 +105,13 @@ export const requestRegisterOtp = async (req, res) => {
     // Send real SMS to user's phone number
     const smsResult = await sendSmsOtp(phone, otp);
 
+    if (!smsResult.success) {
+      return res.status(500).json({ success: false, message: "Failed to send SMS. Please ensure Textbee app is active." });
+    }
+
     return res.status(200).json({
       success: true,
-      message: smsResult.success ? "OTP sent to your mobile phone" : "OTP sent successfully",
-      otp, // Kept in payload for instant testing and on-screen toast fallback
+      message: "OTP sent to your mobile phone",
     });
   } catch (error) {
     console.error("Register OTP error:", error);
@@ -287,10 +290,13 @@ export const requestLoginOtp = async (req, res) => {
     // Send real SMS to user's phone number
     const smsResult = await sendSmsOtp(phone, otp);
 
+    if (!smsResult.success) {
+      return res.status(500).json({ success: false, message: "Failed to send SMS. Please ensure Textbee app is active." });
+    }
+
     return res.status(200).json({
       success: true,
-      message: smsResult.success ? "OTP sent to your mobile phone" : "OTP sent successfully",
-      otp,
+      message: "OTP sent to your mobile phone",
     });
   } catch (error) {
     console.error("Login OTP error:", error);
