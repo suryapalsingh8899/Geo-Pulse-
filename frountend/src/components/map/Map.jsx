@@ -206,8 +206,7 @@ function Map({
         navigationInstructionsInitiallyVisible: false,
         selectionIndicator: false,
         baseLayer: false, // Do not load default imagery (Bing Maps)
-        requestRenderMode: true, // Renders only on changes (improves time complexity/CPU usage)
-        maximumRenderTimeChange: Infinity,
+        requestRenderMode: false, // Continuous render — prevents blank tiles during fast zoom
         // Default skyBox and skyAtmosphere are enabled to show the beautiful starry space background
       });
 
@@ -257,8 +256,12 @@ function Map({
       });
       // Limit zoom out
       viewer.scene.screenSpaceCameraController.maximumZoomDistance = 10000000.0;
-      // Lower the basemap detail threshold slightly to download fewer tiles over the network
-      viewer.scene.globe.maximumScreenSpaceError = 3;
+      // Tile cache: keep more tiles in memory to prevent blank flicker on fast zoom
+      viewer.scene.globe.tileCacheSize = 500;
+      // Screen space error: higher = fewer tiles loaded = faster but less sharp; 2 is a good balance
+      viewer.scene.globe.maximumScreenSpaceError = 2;
+      // Prevent camera from clipping underground (causes blank black screen)
+      viewer.scene.screenSpaceCameraController.minimumZoomDistance = 200;
 
       // Remove Cesium logo/credits overlay for clean UI
       viewer.cesiumWidget.creditContainer.style.display = "none";
@@ -272,6 +275,11 @@ function Map({
       const controller = viewer.scene.screenSpaceCameraController;
       controller.inertiaSpin = 0.9;
       controller.inertiaTranslate = 0.9;
+      controller.inertiaZoom = 0.8; // Smooth deceleration on wheel scroll zoom
+      controller.zoomEventTypes = [
+        CameraEventType.WHEEL,
+        CameraEventType.PINCH,
+      ];
       // Enforce pitch limit when zoomed in
       viewer.scene.screenSpaceCameraController.tiltEventTypes = [
         CameraEventType.RIGHT_DRAG,
