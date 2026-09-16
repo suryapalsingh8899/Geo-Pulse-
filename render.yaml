@@ -34,4 +34,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: https://geopulse-backend.onrender.com/api
+        value: https://geopulse-backend-re2j.onrender.com/api

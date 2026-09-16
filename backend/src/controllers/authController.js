@@ -95,7 +95,7 @@ export const requestRegisterOtp = async (req, res) => {
       return res.status(429).json({ success: false, message: security.message });
     }
 
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const current = security.data;
     current.otpRequests += 1;
     current.tempOtp = otp;
@@ -278,7 +278,7 @@ export const requestLoginOtp = async (req, res) => {
       });
     }
 
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = otp;
     user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
     user.otpRequests = (user.otpRequests || 0) + 1;

@@ -318,7 +318,7 @@ function HomePage() {
   // Login form state
   const [loginStep, setLoginStep] = useState(1);
   const [loginData, setLoginData] = useState({
-    countryCode: "+1",
+    countryCode: "+91",
     phone: "",
     otp: "",
   });
