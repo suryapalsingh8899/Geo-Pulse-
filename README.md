@@ -17,8 +17,7 @@ Many local community concerns—such as damaged infrastructure, sanitation hazar
 
 - **🌐 Interactive 3D/2D Map Engine**: Powered by **CesiumJS**, featuring interactive globe entity markers, custom category pins, geo-location centering, and 3D terrain exploration.
 - **📢 Community Reporting System**: Submit location-anchored reports with descriptions, photo/video media uploads, category tagging, and community voting (upvote/downvote).
-- **📅 Location-Based Events & Activities**: Discover and publish community events (meetings, concerts, hackathons, cleanups) with date/time pickers and interactive map entities.
-- **🔐 Phone Authentication & SMS OTP**: Real-time SMS OTP verification powered by **Firebase Phone Auth** and **Textbee** SMS Gateway, featuring on-screen toast fallback code alerts.
+- **🔐 Phone Authentication & SMS OTP**: Real-time SMS OTP verification powered by **Firebase Phone Auth** and **Textbee** SMS Gateway.
 - **⚡ Resilient Database Architecture**: MongoDB Atlas integration with an automatic in-memory fallback store and **Offline Mode localStorage persistence** to ensure zero downtime even if the backend or database is unreachable.
 - **👤 User Profiles & Reputation**: Personalized user profiles, reputation points, contribution metrics, and security lockouts against spam/brute-force.
 
