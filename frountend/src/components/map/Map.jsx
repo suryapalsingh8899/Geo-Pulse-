@@ -165,10 +165,8 @@ function Map({
           id: "user-location-dot",
           position: Cartesian3.fromDegrees(userLocation.lng, userLocation.lat),
           point: {
-            pixelSize: 10,
-            color: Color.DODGERBLUE,
-            outlineColor: Color.WHITE,
-            outlineWidth: 2,
+            pixelSize: 12,
+            color: Color.fromCssColorString('#3b82f6').withAlpha(0.99),
             disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always render on top
           },
         });

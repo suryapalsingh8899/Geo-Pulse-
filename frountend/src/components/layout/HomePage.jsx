@@ -335,19 +335,28 @@ function HomePage() {
 
   // Fetch initial data & verify session on mount
   useEffect(() => {
-    // 1. Fetch Reports from backend
-    api.reports.getAll().then((res) => {
-      if (res.success && res.reports && res.reports.length > 0) {
-        setReports(res.reports);
-      }
-    });
+    const initData = async () => {
+      const [repRes, evRes] = await Promise.all([
+        api.reports.getAll(),
+        api.events.getAll(),
+      ]);
 
-    // 2. Fetch Events from backend
-    api.events.getAll().then((res) => {
-      if (res.success && res.events && res.events.length > 0) {
-        setEvents(res.events);
+      const offlineReports = JSON.parse(localStorage.getItem("geopulse_offline_reports") || "[]");
+      const offlineEvents = JSON.parse(localStorage.getItem("geopulse_offline_events") || "[]");
+
+      if (repRes.success) {
+        setReports([...offlineReports, ...(repRes.reports || [])]);
+      } else {
+        setReports(offlineReports);
       }
-    });
+
+      if (evRes.success) {
+        setEvents([...offlineEvents, ...(evRes.events || [])]);
+      } else {
+        setEvents(offlineEvents);
+      }
+    };
+    initData();
 
     // 3. Verify user session if token exists
     const token = localStorage.getItem("geopulse_token");
@@ -550,8 +559,13 @@ function HomePage() {
         isMine: true,
         author: { name: userName, profilePic },
       };
-      setReports((prev) => [fallbackReport, ...prev]);
-      showToast("Report pinned!");
+      setReports((prev) => {
+        const newReports = [fallbackReport, ...prev];
+        const offlineReports = newReports.filter((r) => String(r.id).startsWith("rep_"));
+        localStorage.setItem("geopulse_offline_reports", JSON.stringify(offlineReports));
+        return newReports;
+      });
+      showToast("Report pinned (Offline mode)!");
     }
   };
 
@@ -625,8 +639,13 @@ function HomePage() {
         isMine: true,
         author: { name: userName, profilePic },
       };
-      setEvents((prev) => [fallbackEvent, ...prev]);
-      showToast("Event created!");
+      setEvents((prev) => {
+        const newEvents = [fallbackEvent, ...prev];
+        const offlineEvents = newEvents.filter((e) => String(e.id).startsWith("ev_"));
+        localStorage.setItem("geopulse_offline_events", JSON.stringify(offlineEvents));
+        return newEvents;
+      });
+      showToast("Event pinned (Offline mode)!");
     }
   };
 

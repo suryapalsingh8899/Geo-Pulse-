@@ -197,15 +197,14 @@ const OfflineBuffer = () => {
               </>
             )}
 
-            {/* Land sunny highlight (light mode only) */}
-            {!isDark && (
-              <circle cx="100" cy="100" r="100" fill="url(#ob-land-hi)" />
+            {/* Land sunny highlight (light mode only) - Removed per user request */}
+            
+            {/* Specular sun glint - Only in dark mode now */}
+            {isDark && (
+              <ellipse cx={65} cy={55}
+                rx={32} ry={22}
+                fill="url(#ob-specular)" />
             )}
-
-            {/* Specular sun glint */}
-            <ellipse cx={isDark ? 65 : 60} cy={isDark ? 55 : 50}
-              rx={isDark ? 32 : 38} ry={isDark ? 22 : 28}
-              fill="url(#ob-specular)" />
           </svg>
         </div>
 
