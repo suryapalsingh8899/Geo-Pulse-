@@ -18,8 +18,8 @@ Many local community concerns—such as damaged infrastructure, sanitation hazar
 - **🌐 Interactive 3D/2D Map Engine**: Powered by **CesiumJS**, featuring interactive globe entity markers, custom category pins, geo-location centering, and 3D terrain exploration.
 - **📢 Community Reporting System**: Submit location-anchored reports with descriptions, photo/video media uploads, category tagging, and community voting (upvote/downvote).
 - **📅 Location-Based Events & Activities**: Discover and publish community events (meetings, concerts, hackathons, cleanups) with date/time pickers and interactive map entities.
-- **🔐 Phone Authentication & Dual SMS OTP**: Real-time SMS OTP verification powered by **Firebase Phone Auth** with invisible reCAPTCHA, backed by dual backend SMS dispatch (Fast2SMS) and on-screen toast fallback code alerts.
-- **⚡ Resilient Database Architecture**: MongoDB Atlas integration with an automatic in-memory fallback store to ensure zero downtime even if the database is unconfigured.
+- **🔐 Phone Authentication & SMS OTP**: Real-time SMS OTP verification powered by **Firebase Phone Auth** and **Textbee** SMS Gateway, featuring on-screen toast fallback code alerts.
+- **⚡ Resilient Database Architecture**: MongoDB Atlas integration with an automatic in-memory fallback store and **Offline Mode localStorage persistence** to ensure zero downtime even if the backend or database is unreachable.
 - **👤 User Profiles & Reputation**: Personalized user profiles, reputation points, contribution metrics, and security lockouts against spam/brute-force.
 
 ---
@@ -63,7 +63,7 @@ Geo-Pulse/
 │       ├── controllers/         # Authentication, Report, Event & Upload logic
 │       ├── routes/              # Express route definitions
 │       ├── middleware/          # JWT auth, Multer upload, and error handling
-│       └── utils/               # Fast2SMS helper & utility functions
+│       └── utils/               # Textbee helper & utility functions
 └── frountend/                   # React 19 + Vite Frontend Application
     ├── vite.config.js           # Vite + Cesium plugin configuration
     ├── vercel.json              # Vercel SPA rewrite rules
@@ -90,7 +90,8 @@ Geo-Pulse/
 | `MONGODB_URI` | MongoDB Atlas Connection String | `mongodb+srv://user:pass@cluster.mongodb.net/geopulse` |
 | `JWT_SECRET` | Secret key for JWT signing | `geopulse_super_secret_jwt_key_2026` |
 | `CLIENT_URL` | Allowed CORS origin | `*` or `https://geopulse-frontend.onrender.com` |
-| `FAST2SMS_API_KEY` | Optional Fast2SMS API Key for SMS fallback | `your_fast2sms_api_key` |
+| `TEXTBEE_API_KEY` | Textbee API Key for SMS Gateway | `your_textbee_api_key` |
+| `TEXTBEE_DEVICE_ID` | Textbee Device ID for SMS dispatch | `your_textbee_device_id` |
 
 ### Frontend (`frountend/.env`)
 | Variable | Description | Default |
