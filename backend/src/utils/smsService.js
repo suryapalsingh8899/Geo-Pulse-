@@ -1,5 +1,6 @@
 // Helper to send SMS via Textbee
-export const sendSmsOtp = async (phone, otp) => {
+// countryCode: e.g. "+91", "+1", "+44" — defaults to "+91" for backward compat
+export const sendSmsOtp = async (phone, otp, countryCode = "+91") => {
   const apiKey = process.env.TEXTBEE_API_KEY;
   const deviceId = process.env.TEXTBEE_DEVICE_ID;
 
@@ -8,9 +9,13 @@ export const sendSmsOtp = async (phone, otp) => {
     return { success: false, message: "Textbee configuration missing" };
   }
 
-  // Clean phone number (extract 10 digits) and prepend +91 (assumed India)
-  const cleanPhone = phone.toString().replace(/\D/g, "").slice(-10);
-  const fullPhone = `+91${cleanPhone}`;
+  // Sanitize inputs
+  const sanitizedCode = (countryCode || "+91").trim();
+  // Remove all non-digits from the phone, then strip any leading digits matching the country code
+  const digitsOnly = phone.toString().replace(/\D/g, "");
+  // Take last 10 digits for 10-digit countries; for other formats take all digits
+  const cleanPhone = digitsOnly.slice(-10);
+  const fullPhone = `${sanitizedCode}${cleanPhone}`;
 
   try {
     const response = await fetch(`https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/send-sms`, {
@@ -26,7 +31,7 @@ export const sendSmsOtp = async (phone, otp) => {
     });
 
     const data = await response.json();
-    console.log(`📱 Textbee response for ${fullPhone}:`, data);
+    console.log(`📱 Textbee SMS → ${fullPhone} | Response:`, data);
 
     // Textbee returns { success: true, ... } if successful
     if (data.success || response.ok) {

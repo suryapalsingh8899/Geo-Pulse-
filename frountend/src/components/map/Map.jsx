@@ -5,10 +5,7 @@ import {
   Color,
   UrlTemplateImageryProvider,
   Cartesian3,
-  createOsmBuildingsAsync,
-  Cesium3DTileStyle,
   CameraEventType,
-  ImageMaterialProperty,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   Math as CesiumMath,
@@ -100,6 +97,7 @@ function Map({
   const [isEventMode, setIsEventMode] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const selectedReport = selectedReportId
     ? reports.find(
         (r) =>
@@ -194,6 +192,10 @@ function Map({
   useEffect(() => {
     if (cesiumContainer.current && !viewerInstance.current) {
       // Initialize the Cesium Viewer directly
+      // Initialize the Cesium Viewer directly
+      // Detect mobile to apply lighter rendering settings
+      const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
       viewerInstance.current = new Viewer(cesiumContainer.current, {
         animation: false,
         timeline: false,
@@ -206,7 +208,9 @@ function Map({
         navigationInstructionsInitiallyVisible: false,
         selectionIndicator: false,
         baseLayer: false, // Do not load default imagery (Bing Maps)
-        requestRenderMode: false, // Continuous render — prevents blank tiles during fast zoom
+        // requestRenderMode: true prevents constant per-frame redraws — critical for mobile battery/performance
+        requestRenderMode: true,
+        maximumRenderTimeChange: Infinity, // Only render when explicitly requested
         // Default skyBox and skyAtmosphere are enabled to show the beautiful starry space background
       });
 
@@ -256,10 +260,10 @@ function Map({
       });
       // Limit zoom out
       viewer.scene.screenSpaceCameraController.maximumZoomDistance = 10000000.0;
-      // Tile cache: keep more tiles in memory to prevent blank flicker on fast zoom
-      viewer.scene.globe.tileCacheSize = 500;
-      // Screen space error: higher = fewer tiles loaded = faster but less sharp; 2 is a good balance
-      viewer.scene.globe.maximumScreenSpaceError = 2;
+      // Mobile-adaptive tile settings: reduce memory and tile count on mobile
+      viewer.scene.globe.tileCacheSize = isMobile ? 100 : 500;
+      // Higher error = fewer tiles loaded = faster (4 on mobile, 2 on desktop)
+      viewer.scene.globe.maximumScreenSpaceError = isMobile ? 4 : 2;
       // Prevent camera from clipping underground (causes blank black screen)
       viewer.scene.screenSpaceCameraController.minimumZoomDistance = 200;
 
@@ -395,7 +399,9 @@ function Map({
     });
 
     if (isReportMode || isEventMode) {
-      if (isDarkMode) {
+      const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isDarkMode && !isMobileDevice) {
+        // Bloom is visually great on desktop dark mode but too expensive for mobile GPUs
         viewer.scene.postProcessStages.bloom.enabled = true;
         viewer.scene.postProcessStages.bloom.uniforms.contrast = 128;
         viewer.scene.postProcessStages.bloom.uniforms.brightness = -0.3;
@@ -403,7 +409,7 @@ function Map({
         viewer.scene.postProcessStages.bloom.uniforms.sigma = 1.5;
         viewer.scene.postProcessStages.bloom.uniforms.stepSize = 2.0;
       } else {
-        // Disable bloom entirely on light mode as it washes out the white base map
+        // Disable bloom on mobile (perf) and light mode (visual)
         viewer.scene.postProcessStages.bloom.enabled = false;
       }
 
@@ -756,27 +762,32 @@ function Map({
         <div
           style={{
             position: "absolute",
-            top: "100px",
+            top: "calc(var(--header-height, 80px) + 12px)",
             left: "50%",
             transform: "translateX(-50%)",
             background: "var(--glass-bg-solid)",
-            padding: "15px 30px",
+            padding: "12px 20px",
             borderRadius: "30px",
             color: "var(--text-color)",
             zIndex: 100,
             border: "1px solid var(--primary)",
             boxShadow: "0 0 20px rgba(45, 212, 191, 0.5)",
+            whiteSpace: "nowrap",
+            fontSize: "clamp(0.8rem, 3vw, 1rem)",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
           }}
         >
-          Click anywhere on the map to pin the report location!
+          📍 Tap on the map to pin the report location!
           <button
             style={{
-              marginLeft: "15px",
               background: "transparent",
               border: "none",
               color: "#ef4444",
               cursor: "pointer",
               fontWeight: "bold",
+              fontSize: "inherit",
             }}
             onClick={() => setIsSelectingLocation(false)}
           >
@@ -789,27 +800,32 @@ function Map({
         <div
           style={{
             position: "absolute",
-            top: "100px",
+            top: "calc(var(--header-height, 80px) + 12px)",
             left: "50%",
             transform: "translateX(-50%)",
             background: "var(--glass-bg-solid)",
-            padding: "15px 30px",
+            padding: "12px 20px",
             borderRadius: "30px",
             color: "var(--text-color)",
             zIndex: 100,
             border: "1px solid var(--secondary)",
             boxShadow: "0 0 20px rgba(236, 72, 153, 0.5)",
+            whiteSpace: "nowrap",
+            fontSize: "clamp(0.8rem, 3vw, 1rem)",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
           }}
         >
-          Choose the location on the map to pin the event!
+          📌 Tap on the map to pin the event location!
           <button
             style={{
-              marginLeft: "15px",
               background: "transparent",
               border: "none",
               color: "#ef4444",
               cursor: "pointer",
               fontWeight: "bold",
+              fontSize: "inherit",
             }}
             onClick={() => setIsSelectingEventLocation(false)}
           >
@@ -900,39 +916,74 @@ function Map({
             </>
           ) : (
             <>
+              {/* Always-visible on both mobile and desktop */}
               <ReportsButton
                 onClick={() => setIsReportMode(true)}
                 label={t("reports")}
               />
               <button
                 className="btn btn-outline footer-btn"
-                onClick={() => {
-                  setIsSettingsOpen(true);
-                }}
+                onClick={() => setIsSettingsOpen(true)}
               >
                 {t("settings")}
               </button>
+
+              {/* ── 3-dot button: RIGHT of Settings, mobile only ── */}
               <button
-                className="btn btn-pink footer-btn"
-                onClick={() => {
-                  setIsEventMode(true);
-                }}
+                className="btn btn-outline footer-btn footer-more-btn"
+                onClick={() => setIsMobileMenuOpen((v) => !v)}
+                aria-label="More options"
+                aria-expanded={isMobileMenuOpen}
+              >
+                <span style={{ fontSize: "1.2rem", letterSpacing: "1px" }}>···</span>
+              </button>
+
+              {/* Overflow popup + backdrop — mobile only */}
+              {isMobileMenuOpen && (
+                <>
+                  <div
+                    className="footer-menu-backdrop"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  />
+                  <div className="footer-overflow-menu">
+                    <button
+                      className="btn btn-pink footer-btn"
+                      onClick={() => { setIsEventMode(true); setIsMobileMenuOpen(false); }}
+                    >
+                      {t("events")}
+                    </button>
+                    <button
+                      className="btn btn-danger footer-btn"
+                      onClick={() => { alert("Coming soon!"); setIsMobileMenuOpen(false); }}
+                    >
+                      Alerts
+                    </button>
+                    <button
+                      className="btn btn-outline footer-btn"
+                      onClick={() => { alert("Coming soon!"); setIsMobileMenuOpen(false); }}
+                    >
+                      Info
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Desktop-only: Events, Alerts, Info (hidden on mobile) */}
+              <button
+                className="btn btn-pink footer-btn footer-desktop-only"
+                onClick={() => setIsEventMode(true)}
               >
                 {t("events")}
               </button>
               <button
-                className="btn btn-danger footer-btn"
-                onClick={() => {
-                  alert("Coming soon!");
-                }}
+                className="btn btn-danger footer-btn footer-desktop-only"
+                onClick={() => alert("Coming soon!")}
               >
                 Alerts
               </button>
               <button
-                className="btn btn-outline footer-btn"
-                onClick={() => {
-                  alert("Coming soon!");
-                }}
+                className="btn btn-outline footer-btn footer-desktop-only"
+                onClick={() => alert("Coming soon!")}
               >
                 Info
               </button>

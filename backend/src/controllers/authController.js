@@ -76,7 +76,8 @@ const findUserById = async (id) => {
 // @access  Public
 export const requestRegisterOtp = async (req, res) => {
   try {
-    const { phone } = req.body;
+    // Accept countryCode so SMS is sent to the correct international number
+    const { phone, countryCode = "+91" } = req.body;
 
     if (!phone || !/^\d{10}$/.test(phone)) {
       return res.status(400).json({ success: false, message: "Valid 10-digit phone number is required" });
@@ -100,13 +101,16 @@ export const requestRegisterOtp = async (req, res) => {
     current.otpRequests += 1;
     current.tempOtp = otp;
     current.tempOtpExpiry = Date.now() + 10 * 60 * 1000;
+    // Store countryCode so login OTP can reuse it
+    current.countryCode = countryCode;
     tempSecurityStore.set(phone, current);
 
-    // Send real SMS to user's phone number
-    const smsResult = await sendSmsOtp(phone, otp);
+    // Send real SMS — pass countryCode so the number is formatted correctly
+    console.log(`📤 Sending register OTP to ${countryCode}${phone}`);
+    const smsResult = await sendSmsOtp(phone, otp, countryCode);
 
     if (!smsResult.success) {
-      return res.status(500).json({ success: false, message: "Failed to send SMS. Please ensure Textbee app is active." });
+      return res.status(500).json({ success: false, message: "Failed to send SMS. Please ensure Textbee app is active on your Android device." });
     }
 
     return res.status(200).json({
@@ -287,11 +291,13 @@ export const requestLoginOtp = async (req, res) => {
       await user.save();
     }
 
-    // Send real SMS to user's phone number
-    const smsResult = await sendSmsOtp(phone, otp);
+    // Use the countryCode stored on the user's profile (set during registration)
+    const countryCode = user.countryCode || "+91";
+    console.log(`📤 Sending login OTP to ${countryCode}${phone}`);
+    const smsResult = await sendSmsOtp(phone, otp, countryCode);
 
     if (!smsResult.success) {
-      return res.status(500).json({ success: false, message: "Failed to send SMS. Please ensure Textbee app is active." });
+      return res.status(500).json({ success: false, message: "Failed to send SMS. Please ensure Textbee app is active on your Android device." });
     }
 
     return res.status(200).json({

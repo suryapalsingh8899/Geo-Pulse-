@@ -310,7 +310,7 @@ function HomePage() {
     age: "",
     gender: "",
     country: "",
-    countryCode: "+1",
+    countryCode: "+91",
     phone: "",
     otp: "",
   });

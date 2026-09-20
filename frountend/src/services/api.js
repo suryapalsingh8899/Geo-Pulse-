@@ -35,7 +35,7 @@ async function request(endpoint, options = {}) {
 export const api = {
   // Authentication APIs
   auth: {
-    requestRegisterOtp: (phone, countryCode = "+1") =>
+    requestRegisterOtp: (phone, countryCode = "+91") =>
       request("/auth/register-otp", {
         method: "POST",
         body: JSON.stringify({ phone, countryCode }),
