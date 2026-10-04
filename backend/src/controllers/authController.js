@@ -441,7 +441,7 @@ export const updateProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    const { name, bio, profilePic, age, gender, country } = req.body;
+    const { name, bio, profilePic, age, gender, country, lastLat, lastLng } = req.body;
 
     if (name !== undefined) {
       const trimmedName = name.trim();
@@ -475,6 +475,11 @@ export const updateProfile = async (req, res) => {
     if (age !== undefined) user.age = age;
     if (gender !== undefined) user.gender = gender;
     if (country !== undefined) user.country = country;
+    if (lastLat !== undefined && lastLng !== undefined) {
+      user.lastLat = lastLat;
+      user.lastLng = lastLng;
+      user.locationUpdatedAt = new Date();
+    }
 
     if (isMongoConnected) {
       await user.save();

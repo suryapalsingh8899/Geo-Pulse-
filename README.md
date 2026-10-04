@@ -1,6 +1,8 @@
 # 🌍 Geo-Pulse
 
-Geo-Pulse is an interactive, location-based web platform designed to bring relevant local information together through a unified 3D/2D visual map interface. It connects communities with local issues, events, emergency alerts, and spatial insights to promote community awareness and rapid decision-making.
+> **A real-time global disaster awareness & community reporting platform powered by a 3D interactive globe.**
+
+Geo-Pulse connects communities with live local issues, events, and official global emergency alerts — all visualised on a stunning CesiumJS 3D map. It pulls real-time disaster data from NASA and USGS, animates them with pulsing radar waves on the globe, and can broadcast SMS warnings to all registered users instantly.
 
 [![Live Website](https://img.shields.io/badge/Live-Geo--Pulse%20App-0ea5e9?style=for-the-badge&logo=render)](https://geopulse-frontend.onrender.com)
 [![API Status](https://img.shields.io/badge/API-Active-22c55e?style=for-the-badge&logo=node.js)](https://geopulse-backend.onrender.com/api/health)
@@ -9,39 +11,96 @@ Geo-Pulse is an interactive, location-based web platform designed to bring relev
 ---
 
 ## 🚀 Motivation
-Many local community concerns—such as damaged infrastructure, sanitation hazards, or safety hazards—often remain unnoticed or fail to reach local authorities in time. Geo-Pulse empowers citizens to report structured issues connected directly to geographical coordinates with supporting photo/video evidence. Simultaneously, it allows citizens and organizations to visually publish and discover nearby events and emergency alerts without searching through scattered channels.
+
+Local community concerns — damaged infrastructure, sanitation hazards, road accidents — often fail to reach authorities in time. Meanwhile, global disasters like earthquakes and wildfires demand immediate public awareness. Geo-Pulse solves both: it empowers citizens to report geo-anchored local issues and delivers real-time official disaster alerts directly on an immersive 3D globe, making critical information impossible to miss.
 
 ---
 
-## ✨ Key Features
+## ✨ Feature Highlights
 
-- **🌐 Interactive 3D/2D Map Engine**: Powered by **CesiumJS**, featuring interactive globe entity markers, custom category pins, geo-location centering, and 3D terrain exploration.
-- **📢 Community Reporting System**: Submit location-anchored reports with descriptions, photo/video media uploads, category tagging, and community voting (upvote/downvote).
-- **🔐 Phone Authentication & SMS OTP**: Real-time SMS OTP verification powered by **Firebase Phone Auth** and **Textbee** SMS Gateway.
-- **⚡ Resilient Database Architecture**: MongoDB Atlas integration with an automatic in-memory fallback store and **Offline Mode localStorage persistence** to ensure zero downtime even if the backend or database is unreachable.
-- **👤 User Profiles & Reputation**: Personalized user profiles, reputation points, contribution metrics, and security lockouts against spam/brute-force.
+### 🚨 Global Disaster Alert System
+- Pulls **live official data** from two major global APIs every 10 minutes:
+  - **USGS** — Significant earthquakes & tsunami warnings worldwide
+  - **NASA EONET** — Active wildfires, severe storms, cyclones, volcanoes, floods, and sea-ice events
+- Disasters appear on the globe as **coloured dots** based on severity:
+  - 🔴 Critical — `#ff1a1a`
+  - 🟠 High — `#ff6600`
+  - 🟡 Medium — `#ffcc00`
+- Each alert radiates a **pulsing radar wave animation** (independent per alert, staggered start, 30 fps) using CesiumJS `CallbackProperty` + `ColorMaterialProperty`
+- Alerts are **lazy-loaded** — fetched only when the user first opens Alert Mode, keeping initial page load fast
+- Server-side **10-minute in-memory cache** with `AbortSignal` timeouts prevents API hammering and backend stalls
+- Admin-created alerts trigger instant **SMS broadcasts** to all registered users via Textbee
+
+### 🌐 Interactive 3D/2D Map Engine
+- Powered by **CesiumJS** — full 3D globe with Google Maps raster tiles (forced English labels)
+- Dark/Light mode toggle with live imagery layer adjustment (brightness, contrast, saturation, gamma)
+- Smooth inertia zoom (trackpad + pinch), enforced pitch limits, custom camera controls
+- `requestRenderMode: true` — no continuous GPU draw loop; renders only on demand (critical for mobile battery)
+- Mobile-adaptive tile cache (`100` tiles) and screen-space error (`4`) vs desktop (`500` / `2`)
+
+### 📢 Community Reporting
+- Pin geo-anchored reports with photo/video evidence, category tags, and descriptions
+- Community upvote/downvote with optimistic UI updates
+- Offline Mode: reports and events saved to `localStorage` when backend is unreachable
+- Seen/unseen marker state — seen pins render as grey, unseen as vivid heatmap glows
+
+### 📅 Local Events
+- Create, browse, and interact with community events pinned to the globe
+- Event posters, photos, videos, timing, and public/private visibility settings
+- Event upvoting system
+
+### 🔐 Phone Authentication & SMS OTP
+- **Backend SMS Auth** via Textbee SMS Gateway — OTP sent to user's phone
+- JWT session management with auto-session restore on page reload
+- Brute-force protection and spam lockout on the backend
+
+### ⚡ Resilient Architecture
+- MongoDB Atlas primary database with automatic **in-memory fallback store** if DB is unreachable
+- `localStorage` offline buffer persists reports/events across sessions
+- All external API failures are isolated — if NASA or USGS is down, cached data is served
+
+### 👤 User Profiles & Reputation
+- Custom usernames, avatar upload with crop tool (`react-easy-crop`)
+- Reputation stats: total upvotes, downvotes, contribution count
+- Public profile view — click any author name to see their profile
+
+### 🌐 Multi-Language Support
+- `i18next` internationalisation — map UI elements support multiple languages
 
 ---
 
 ## 🛠️ Tech Stack
 
 ### Frontend (`frountend/`)
-- **Core Framework**: React 19 (built with Vite)
-- **Map Viewer**: CesiumJS & `vite-plugin-cesium`
-- **Styling**: Vanilla CSS (Modern Dark Glassmorphism Design System)
-- **Utilities**: `i18next` (Multi-language localization), `react-easy-crop` (Avatar cropping)
+| Technology | Purpose |
+|---|---|
+| React 19 + Vite | Core framework & build tool |
+| CesiumJS + `vite-plugin-cesium` | 3D globe, entity rendering, wave animations |
+| Vanilla CSS | Modern dark glassmorphism design system |
+| `i18next` | Multi-language localisation |
+| `react-easy-crop` | Avatar image cropping |
 
 ### Backend (`backend/`)
-- **Runtime & Server**: Node.js & Express.js (ES Modules)
-- **Database**: MongoDB & Mongoose ODM (with automatic in-memory fallback store)
-- **Authentication**: JWT (JSON Web Tokens) & Firebase Auth SDK
-- **File Storage**: Multer middleware for static media uploads (`/uploads`)
+| Technology | Purpose |
+|---|---|
+| Node.js + Express.js (ES Modules) | REST API server |
+| MongoDB + Mongoose (`.lean()` queries) | Primary database with in-memory fallback |
+| JWT | Stateless session auth |
+| **USGS Earthquake API** | Live earthquake & tsunami data |
+| **NASA EONET API** | Live wildfire, storm, volcano, flood data |
+| Textbee SMS Gateway | OTP auth + emergency SMS broadcasts |
+| Multer | File upload middleware |
 
-### Hosting & Infrastructure
-- **Deployment**: Render Blueprint (`render.yaml`) & Vercel (`frountend/vercel.json`)
-- **Production Endpoints**:
-  - **Live Frontend App**: [https://geopulse-frontend.onrender.com](https://geopulse-frontend.onrender.com)
-  - **Live Backend API**: [https://geopulse-backend.onrender.com/api](https://geopulse-backend.onrender.com/api)
+### Infrastructure
+| Service | Purpose |
+|---|---|
+| Render Blueprint (`render.yaml`) | One-click deploy for backend + frontend |
+| Vercel (`vercel.json`) | Frontend SPA routing fallback |
+| MongoDB Atlas | Cloud database |
+
+**Production URLs:**
+- 🌐 Frontend: [https://geopulse-frontend.onrender.com](https://geopulse-frontend.onrender.com)
+- ⚙️ Backend API: [https://geopulse-backend.onrender.com/api](https://geopulse-backend.onrender.com/api)
 
 ---
 
@@ -49,33 +108,73 @@ Many local community concerns—such as damaged infrastructure, sanitation hazar
 
 ```text
 Geo-Pulse/
-├── render.yaml                  # Render Blueprint configuration for 1-click deployment
-├── README.md                    # Project documentation
-├── .gitignore                   # Excludes secrets, node_modules, and build outputs
-├── backend/                     # Express REST API Server
-│   ├── server.js                # Server entry point (CORS, trust proxy, routes, uploads)
-│   ├── package.json             # Backend dependencies & scripts
-│   ├── .env.example             # Template for environment variables
+├── render.yaml                      # Render Blueprint — 1-click deploy both services
+├── README.md
+├── .gitignore
+│
+├── backend/
+│   ├── server.js                    # Express entry point (CORS, routes, uploads, trust proxy)
+│   ├── package.json
+│   ├── .env.example
 │   └── src/
-│       ├── config/db.js         # Mongoose connection & in-memory fallback store
-│       ├── models/              # User, Report, Event Mongoose schemas
-│       ├── controllers/         # Authentication, Report, Event & Upload logic
-│       ├── routes/              # Express route definitions
-│       ├── middleware/          # JWT auth, Multer upload, and error handling
-│       └── utils/               # Textbee helper & utility functions
-└── frountend/                   # React 19 + Vite Frontend Application
-    ├── vite.config.js           # Vite + Cesium plugin configuration
-    ├── vercel.json              # Vercel SPA rewrite rules
-    ├── package.json             # Frontend dependencies & scripts
+│       ├── config/
+│       │   └── db.js                # MongoDB connection + in-memory fallback store
+│       ├── models/
+│       │   ├── User.js
+│       │   ├── Report.js
+│       │   ├── Event.js
+│       │   └── Alert.js             # Admin/custom alert schema
+│       ├── controllers/
+│       │   ├── authController.js    # SMS OTP, JWT, profile management
+│       │   ├── reportController.js  # CRUD, voting, seen state
+│       │   ├── eventController.js   # CRUD, voting
+│       │   ├── alertController.js   # USGS + NASA EONET fetcher, 10-min cache, SMS blast
+│       │   └── uploadController.js
+│       ├── routes/
+│       │   ├── authRoutes.js
+│       │   ├── reportRoutes.js
+│       │   ├── eventRoutes.js
+│       │   ├── alertRoutes.js
+│       │   └── uploadRoutes.js
+│       ├── middleware/
+│       │   ├── authMiddleware.js    # JWT verification
+│       │   └── uploadMiddleware.js  # Multer config
+│       └── utils/
+│           └── smsService.js        # Textbee SMS helper
+│
+└── frountend/
+    ├── vite.config.js               # Vite + Cesium plugin
+    ├── vercel.json                  # SPA rewrite rules
+    ├── package.json
     └── src/
-        ├── App.jsx              # Main Dashboard shell
-        ├── services/api.js      # Central API client layer
-        ├── config/firebase.js   # Firebase App & Phone Auth initializers
-        ├── components/
-        │   ├── map/Map.jsx      # CesiumJS globe component & entity rendering
-        │   ├── modals/          # Add Report, Add Event, Details & Profile modals
-        │   └── buttons/         # Register, Login, Profile & Filter buttons
-        └── assets/              # UI graphics and styles
+        ├── App.jsx
+        ├── index.css                # Global design system (glassmorphism, dark/light tokens)
+        ├── services/
+        │   └── api.js               # Centralised API client (auth, reports, events, alerts)
+        ├── config/
+        │   └── firebase.js
+        └── components/
+            ├── map/
+            │   └── Map.jsx          # CesiumJS globe, entity rendering, wave pulse animation
+            ├── layout/
+            │   └── HomePage.jsx     # App shell, state management, lazy alert loading
+            ├── modals/
+            │   ├── AddReportModal.jsx
+            │   ├── ReportDetailModal.jsx
+            │   ├── AddEventModal.jsx
+            │   ├── EventDetailModal.jsx
+            │   ├── AlertDetailModal.jsx  # Disaster detail view (severity, source, description)
+            │   ├── ProfileModal.jsx
+            │   ├── PublicProfileModal.jsx
+            │   └── SettingsModal.jsx
+            ├── buttons/
+            │   ├── LoginButton.jsx
+            │   ├── RegisterButton.jsx
+            │   ├── ProfileButton.jsx
+            │   ├── LogoutButton.jsx
+            │   └── ReportsButton.jsx
+            └── utils/
+                └── OfflineBuffer.jsx
 ```
 
 ---
@@ -83,58 +182,65 @@ Geo-Pulse/
 ## 🔑 Environment Variables
 
 ### Backend (`backend/.env`)
-| Variable | Description | Example / Default |
-| :--- | :--- | :--- |
-| `PORT` | Backend server port | `5000` |
-| `MONGODB_URI` | MongoDB Atlas Connection String | `mongodb+srv://user:pass@cluster.mongodb.net/geopulse` |
-| `JWT_SECRET` | Secret key for JWT signing | `geopulse_super_secret_jwt_key_2026` |
-| `CLIENT_URL` | Allowed CORS origin | `*` or `https://geopulse-frontend.onrender.com` |
-| `TEXTBEE_API_KEY` | Textbee API Key for SMS Gateway | `your_textbee_api_key` |
-| `TEXTBEE_DEVICE_ID` | Textbee Device ID for SMS dispatch | `your_textbee_device_id` |
+
+| Variable | Description | Example |
+|---|---|---|
+| `PORT` | Server port | `5000` |
+| `MONGODB_URI` | MongoDB Atlas connection string | `mongodb+srv://user:pass@cluster.mongodb.net/geopulse` |
+| `JWT_SECRET` | JWT signing secret | `your_jwt_secret` |
+| `CLIENT_URL` | CORS allowed origin | `https://geopulse-frontend.onrender.com` |
+| `TEXTBEE_API_KEY` | Textbee API key for SMS | `your_textbee_api_key` |
+| `TEXTBEE_DEVICE_ID` | Textbee Device ID | `your_textbee_device_id` |
 
 ### Frontend (`frountend/.env`)
+
 | Variable | Description | Default |
-| :--- | :--- | :--- |
-| `VITE_API_URL` | URL of the backend REST API | `http://localhost:5000/api` |
+|---|---|---|
+| `VITE_API_URL` | Backend REST API base URL | `http://localhost:5000/api` |
+
+> No API keys are needed for NASA EONET or USGS — both are **free and public**.
 
 ---
 
 ## 🏃 Running Locally
 
-### 1. Clone the Repository
+### 1. Clone
+
 ```bash
 git clone https://github.com/suryapalsingh8899/Geo-Pulse-.git
 cd Geo-Pulse-
 ```
 
-### 2. Start Backend API
+### 2. Backend
+
 ```bash
 cd backend
 npm install
+cp .env.example .env   # fill in your values
 npm run dev
-# Server running on http://localhost:5000
+# → http://localhost:5000
 ```
 
-### 3. Start Frontend App
+### 3. Frontend
+
 ```bash
 cd ../frountend
 npm install
 npm run dev
-# App running on http://localhost:5173
+# → http://localhost:5173
 ```
 
 ---
 
-## 🚀 Cloud Deployment
+## 🚀 Cloud Deployment (Render)
 
-### Deploy via Render Blueprint (Recommended)
-1. Go to [dashboard.render.com](https://dashboard.render.com/) $\rightarrow$ **New +** $\rightarrow$ **Blueprint**.
-2. Connect repository `suryapalsingh8899/Geo-Pulse-`.
-3. Provide environment variables (`MONGODB_URI`, `JWT_SECRET`).
-4. Click **Deploy Blueprint**. Render will provision both backend web service and frontend static site automatically using [`render.yaml`](file:///e:/GITHUB/Geo%20pulse/render.yaml).
+1. Go to [dashboard.render.com](https://dashboard.render.com) → **New +** → **Blueprint**
+2. Connect repository `suryapalsingh8899/Geo-Pulse-`
+3. Fill in environment variables (`MONGODB_URI`, `JWT_SECRET`, `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID`)
+4. Click **Deploy Blueprint** — Render provisions both services automatically from [`render.yaml`](render.yaml)
 
 ---
 
 ## 📄 License & Author
 
-Developed with ❤️ by **Suryapal Singh** ([@suryapalsingh8899](https://github.com/suryapalsingh8899)).
+Developed with ❤️ by **Suryapal Singh** ([@suryapalsingh8899](https://github.com/suryapalsingh8899))

@@ -9,15 +9,20 @@ import {
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   Math as CesiumMath,
+  CallbackProperty,
+  ColorMaterialProperty,
+  HeightReference,
 } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import ReportsButton from "../buttons/ReportsButton";
 import ReportDetailModal from "../modals/ReportDetailModal";
 import AddReportModal from "../modals/AddReportModal";
 import EventDetailModal from "../modals/EventDetailModal";
+import AlertDetailModal from "../modals/AlertDetailModal";
 import AddEventModal from "../modals/AddEventModal";
 import SettingsModal from "../modals/SettingsModal";
 import { useTranslation } from "react-i18next";
+import api from "../../services/api";
 
 const mockEvents = [
   {
@@ -77,12 +82,17 @@ function Map({
   setReports,
   events = [],
   setEvents,
+  alerts = [],
+  setAlerts,
+  alertsLoaded = false,
+  onLoadAlerts,
   onAddReport,
   onAddEvent,
   onVote,
   onEventVote,
   onReportOpened,
   onEventOpened,
+  onAlertOpened,
   onAuthorClick,
   userName,
   setUserName,
@@ -95,6 +105,8 @@ function Map({
   const zoomVelocityRef = useRef(0);
   const [isReportMode, setIsReportMode] = useState(false);
   const [isEventMode, setIsEventMode] = useState(false);
+  const [isAlertMode, setIsAlertMode] = useState(false);
+  const [alertsLoading, setAlertsLoading] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -112,6 +124,14 @@ function Map({
           e.id?.toString() === selectedEventId?.toString() ||
           e._id?.toString() === selectedEventId?.toString()
       )
+    : null;
+  const [selectedAlertId, setSelectedAlertId] = useState(null);
+  const selectedAlert = selectedAlertId != null
+    ? (alerts.find(
+        (a) =>
+          a._id?.toString() === selectedAlertId?.toString() ||
+          a.id?.toString() === selectedAlertId?.toString()
+      ) || null)
     : null;
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [isSelectingEventLocation, setIsSelectingEventLocation] =
@@ -156,6 +176,16 @@ function Map({
     };
   }, [locationEnabled]);
 
+  // Sync user location to backend if logged in
+  useEffect(() => {
+    if (isLoggedIn && userLocation) {
+      api.auth.updateProfile({
+        lastLat: userLocation.lat,
+        lastLng: userLocation.lng,
+      }).catch(err => console.error("Failed to sync location:", err));
+    }
+  }, [isLoggedIn, userLocation]);
+
   useEffect(() => {
     if (viewerInstance.current && userLocation && locationEnabled) {
       const viewer = viewerInstance.current;
@@ -167,7 +197,8 @@ function Map({
           point: {
             pixelSize: 12,
             color: Color.fromCssColorString('#3b82f6').withAlpha(0.99),
-            disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always render on top
+            heightReference: HeightReference.CLAMP_TO_GROUND,
+            disableDepthTestDistance: 1.2e7,
           },
         });
       } else {
@@ -383,9 +414,11 @@ function Map({
     isSelectingEventLocation,
     isReportMode,
     isEventMode,
+    isAlertMode,
   ]);
 
   useEffect(() => {
+    let pulseInterval;
     if (!viewerInstance.current) return;
     const viewer = viewerInstance.current;
 
@@ -396,8 +429,11 @@ function Map({
       }
     });
 
-    if (isReportMode || isEventMode) {
-      const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isReportMode || isEventMode || isAlertMode) {
+      // Detect mobile once, re-use below
+      const isMobileDevice = window.__isMobile ?? (
+        window.__isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      );
       if (isDarkMode && !isMobileDevice) {
         // Bloom is visually great on desktop dark mode but too expensive for mobile GPUs
         viewer.scene.postProcessStages.bloom.enabled = true;
@@ -478,6 +514,33 @@ function Map({
       const heatmapImage = createHeatmapImage();
       const seenHeatmapImage = createSeenHeatmapImage();
 
+      const createEmojiImage = (emoji, severity) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 72;
+        canvas.height = 72;
+        const ctx = canvas.getContext("2d");
+        
+        const alertColor =
+            severity === "critical" ? "rgba(255, 26, 26, 0.6)" :
+            severity === "high"     ? "rgba(255, 102, 0, 0.6)" :
+                                      "rgba(255, 204, 0, 0.6)";
+
+        // Draw soft glowing background
+        const gradient = ctx.createRadialGradient(36, 36, 0, 36, 36, 36);
+        gradient.addColorStop(0, alertColor);
+        gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 72, 72);
+
+        // Draw emoji
+        ctx.font = "40px 'Segoe UI Emoji', Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(emoji, 36, 40);
+
+        return canvas;
+      };
+
       if (isReportMode) {
         reports.forEach((report) => {
           const id = report.id || report._id;
@@ -488,7 +551,8 @@ function Map({
               image: report.seen ? seenHeatmapImage : heatmapImage,
               width: 45,
               height: 45,
-              disableDepthTestDistance: Number.POSITIVE_INFINITY,
+              heightReference: HeightReference.CLAMP_TO_GROUND,
+              disableDepthTestDistance: 1.2e7,
             },
             description: report.description,
           });
@@ -503,11 +567,69 @@ function Map({
               image: event.seen ? seenHeatmapImage : heatmapImage,
               width: 55,
               height: 55,
-              disableDepthTestDistance: Number.POSITIVE_INFINITY,
+              heightReference: HeightReference.CLAMP_TO_GROUND,
+              disableDepthTestDistance: 1.2e7,
             },
             description: event.description,
           });
         });
+      } else if (isAlertMode) {
+        // We collect all update functions to execute them in a single global interval
+        const updateFunctions = [];
+
+        alerts.forEach((alertItem, idx) => {
+          const id = alertItem.id || alertItem._id;
+          // Define danger radius in meters based on severity
+          const radii = { critical: 500000, high: 300000, medium: 150000, low: 50000 };
+          const maxRadius = radii[alertItem.severity || "high"] || 300000;
+          
+          // Pick colour by severity
+          const alertColor =
+            alertItem.severity === "critical" ? Color.fromCssColorString("#ff1a1a") :
+            alertItem.severity === "high"     ? Color.fromCssColorString("#ff6600") :
+                                                Color.fromCssColorString("#ffcc00");
+          const typeStr = (alertItem.type || "").toLowerCase().replace(/_/g, " ");
+          let emoji = "⚠️";
+          if (typeStr.includes("earthquake")) emoji = "💥";
+          else if (typeStr.includes("volcano")) emoji = "🌋";
+          else if (typeStr.includes("tsunami")) emoji = "🌊";
+          else if (typeStr.includes("wildfire") || typeStr.includes("fire")) emoji = "🔥";
+          else if (typeStr.includes("storm")) emoji = "⛈️";
+          else if (typeStr.includes("cyclone") || typeStr.includes("hurricane")) emoji = "🌀";
+          else if (typeStr.includes("flood")) emoji = "💧";
+          else if (typeStr.includes("drought")) emoji = "☀️";
+          else if (typeStr.includes("ice") || typeStr.includes("snow")) emoji = "🧊";
+          else if (typeStr.includes("dust") || typeStr.includes("haze")) emoji = "💨";
+
+          const emojiCanvas = createEmojiImage(emoji, alertItem.severity);
+          const baseSize = alertItem.severity === "critical" ? 44 : 32;
+
+          viewer.entities.add({
+            id: `alert-${id}`,
+            position: Cartesian3.fromDegrees(alertItem.lng, alertItem.lat),
+            description: alertItem.description,
+            billboard: {
+              image: emojiCanvas,
+              width: baseSize,
+              height: baseSize,
+              heightReference: HeightReference.CLAMP_TO_GROUND,
+              disableDepthTestDistance: 1.2e7,
+            },
+            ellipse: {
+              // Static geometry completely eliminates polygon rebuild lag
+              semiMinorAxis: maxRadius,
+              semiMajorAxis: maxRadius,
+              material: alertColor.withAlpha(0.15),
+              outline: true,
+              outlineColor: alertColor.withAlpha(0.3),
+            },
+          });
+        });
+
+        // No continuous animation needed for alerts anymore, just render once
+        if (viewerInstance.current && !viewerInstance.current.isDestroyed()) {
+          viewerInstance.current.scene.requestRender();
+        }
       }
       viewer.scene.requestRender();
       // Cesium's texture atlas takes a moment to process the dynamic canvas images.
@@ -523,12 +645,15 @@ function Map({
     } else {
       viewer.scene.postProcessStages.bloom.enabled = false;
       viewer.scene.requestRender();
-      setTimeout(() => {
-        if (viewerInstance.current && !viewerInstance.current.isDestroyed())
-          viewerInstance.current.scene.requestRender();
-      }, 100);
     }
-  }, [isReportMode, isEventMode, reports, events]);
+
+    return () => {
+      // Clear one or many intervals depending on mode
+      if (Array.isArray(pulseInterval)) pulseInterval.forEach(clearInterval);
+      else if (pulseInterval) clearInterval(pulseInterval);
+      else if (pulseInterval) clearInterval(pulseInterval);
+    };
+  }, [isReportMode, isEventMode, isAlertMode, reports, events, alerts]);
 
   useEffect(() => {
     if (!viewerInstance.current) return;
@@ -536,7 +661,7 @@ function Map({
 
     const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
 
-    if (isReportMode || isEventMode) {
+    if (isReportMode || isEventMode || isAlertMode) {
       if (isSelectingLocation || isSelectingEventLocation) {
         const cursorSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="%23ef4444" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3" fill="white"></circle></svg>`;
         viewer.canvas.style.cursor = `url('${cursorSvg}') 18 36, crosshair`;
@@ -605,6 +730,21 @@ function Map({
                 if (onEventOpened && !event.seen) {
                   onEventOpened(finalId);
                 }
+              }
+            } else if (pickedObject.id.id.startsWith("alert-")) {
+              // Official alerts are public — no login required
+              const entityId = pickedObject.id.id; // e.g. "alert-usgs_us7000xxxx"
+              const alertId = entityId.replace("alert-", "");
+              const foundAlert = alerts.find(
+                (a) =>
+                  (a.id?.toString() === alertId) ||
+                  (a._id?.toString() === alertId)
+              );
+              if (foundAlert) {
+                setSelectedAlertId(foundAlert._id || foundAlert.id || alertId);
+              } else {
+                // Fallback: set by raw ID so the modal can show whatever we have
+                setSelectedAlertId(alertId);
               }
             } else if (pickedObject.id.id === "user-location-dot") {
               if (userLocation) {
@@ -676,14 +816,17 @@ function Map({
   }, [
     isReportMode,
     isEventMode,
+    isAlertMode,
     isLoggedIn,
     onRequireLogin,
     isSelectingLocation,
     isSelectingEventLocation,
     reports,
     events,
+    alerts,
     userLocation,
     onEventOpened,
+    onAlertOpened,
   ]);
 
   const handleWheel = (e) => {
@@ -752,6 +895,14 @@ function Map({
             onVote={onEventVote}
             onAuthorClick={onAuthorClick}
             userLocation={userLocation}
+          />,
+          document.body,
+        )}
+      {selectedAlert &&
+        createPortal(
+          <AlertDetailModal
+            alert={selectedAlert}
+            onClose={() => setSelectedAlertId(null)}
           />,
           document.body,
         )}
@@ -868,6 +1019,88 @@ function Map({
           document.body,
         )}
 
+      {isAlertMode && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(var(--header-height, 80px) + 20px)",
+            left: "20px",
+            background: "rgba(20, 25, 35, 0.85)",
+            backdropFilter: "blur(12px)",
+            padding: "16px 20px",
+            borderRadius: "16px",
+            color: "var(--text-color)",
+            zIndex: 90,
+            border: "1px solid rgba(255,255,255,0.1)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+            fontSize: "0.85rem",
+            pointerEvents: "none", // so it doesn't block map clicks
+          }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "0.95rem",
+              color: "#fff",
+              borderBottom: "1px solid rgba(255,255,255,0.1)",
+              paddingBottom: "8px",
+              marginBottom: "2px",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              fontWeight: 700
+            }}
+          >
+            Live Trackers
+          </h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
+            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(255,100,100,0.5))" }}>💥</span> Earthquakes
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
+            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(255,100,100,0.5))" }}>🌋</span> Volcanoes
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
+            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(100,200,255,0.5))" }}>🌊</span> Tsunamis
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
+            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(255,150,50,0.5))" }}>🔥</span> Wildfires
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
+            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(150,150,255,0.5))" }}>⛈️</span> Severe Storms
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
+            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(200,200,200,0.5))" }}>🌀</span> Cyclones
+          </div>
+
+          <h3
+            style={{
+              margin: "8px 0 0 0",
+              fontSize: "0.85rem",
+              color: "rgba(255,255,255,0.7)",
+              borderBottom: "1px solid rgba(255,255,255,0.1)",
+              paddingBottom: "4px",
+              marginBottom: "2px",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              fontWeight: 600
+            }}
+          >
+            Severity Level
+          </h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 500, fontSize: "0.8rem", color: "rgba(255,255,255,0.8)" }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff1a1a", boxShadow: "0 0 8px #ff1a1a" }}></div> Critical
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 500, fontSize: "0.8rem", color: "rgba(255,255,255,0.8)" }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff6600", boxShadow: "0 0 8px #ff6600" }}></div> High
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 500, fontSize: "0.8rem", color: "rgba(255,255,255,0.8)" }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ffcc00", boxShadow: "0 0 8px #ffcc00" }}></div> Medium / Low
+          </div>
+        </div>
+      )}
+
       <div className="map-footer">
         <div className="map-footer-content">
           {isReportMode ? (
@@ -907,6 +1140,17 @@ function Map({
                 onClick={() => {
                   setIsEventMode(false);
                   setIsSelectingEventLocation(false);
+                }}
+              >
+                {t("goBack")}
+              </button>
+            </>
+          ) : isAlertMode ? (
+            <>
+              <button
+                className="btn btn-outline footer-btn"
+                onClick={() => {
+                  setIsAlertMode(false);
                 }}
               >
                 {t("goBack")}
@@ -952,7 +1196,11 @@ function Map({
                     </button>
                     <button
                       className="btn btn-danger footer-btn"
-                      onClick={() => { alert("Coming soon!"); setIsMobileMenuOpen(false); }}
+                      onClick={async () => {
+                        if (!alertsLoaded && onLoadAlerts) await onLoadAlerts();
+                        setIsAlertMode(true);
+                        setIsMobileMenuOpen(false);
+                      }}
                     >
                       Alerts
                     </button>
@@ -975,7 +1223,10 @@ function Map({
               </button>
               <button
                 className="btn btn-danger footer-btn footer-desktop-only"
-                onClick={() => alert("Coming soon!")}
+                onClick={async () => {
+                  if (!alertsLoaded && onLoadAlerts) await onLoadAlerts();
+                  setIsAlertMode(true);
+                }}
               >
                 Alerts
               </button>

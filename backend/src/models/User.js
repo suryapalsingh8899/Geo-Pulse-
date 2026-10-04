@@ -73,6 +73,19 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: () => new Date().toDateString(),
     },
+    // Last known location (updated by frontend after login)
+    lastLat: {
+      type: Number,
+      default: null,
+    },
+    lastLng: {
+      type: Number,
+      default: null,
+    },
+    locationUpdatedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

@@ -295,6 +295,8 @@ function HomePage() {
 
   const [reports, setReports] = useState(initialMockReports);
   const [events, setEvents] = useState(initialMockEvents);
+  const [alerts, setAlerts] = useState([]);
+  const [alertsLoaded, setAlertsLoaded] = useState(false);
   const [userStats, setUserStats] = useState({ totalUpvotes: 0, totalDownvotes: 0 });
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
@@ -336,6 +338,8 @@ function HomePage() {
   // Fetch initial data & verify session on mount
   useEffect(() => {
     const initData = async () => {
+      // Fetch reports and events in parallel — do NOT pre-fetch alerts
+      // Alerts are lazy-loaded the first time the user opens Alert Mode
       const [repRes, evRes] = await Promise.all([
         api.reports.getAll(),
         api.events.getAll(),
@@ -736,6 +740,16 @@ function HomePage() {
           setReports={setReports}
           events={events}
           setEvents={setEvents}
+          alerts={alerts}
+          setAlerts={setAlerts}
+          alertsLoaded={alertsLoaded}
+          onLoadAlerts={async () => {
+            if (alertsLoaded) return;
+            const res = await api.alerts.getAll();
+            const data = Array.isArray(res) ? res : res?.alerts ?? [];
+            setAlerts(data);
+            setAlertsLoaded(true);
+          }}
           onAddReport={handleAddReport}
           onAddEvent={handleAddEvent}
           onVote={handleVote}

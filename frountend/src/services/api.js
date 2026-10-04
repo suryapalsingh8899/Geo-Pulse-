@@ -152,6 +152,24 @@ export const api = {
       }),
   },
 
+  // Alerts APIs
+  alerts: {
+    getAll: () => request("/alerts"),
+
+    getById: (id) => request(`/alerts/${id}`),
+
+    create: (alertData) =>
+      request("/alerts", {
+        method: "POST",
+        body: JSON.stringify(alertData),
+      }),
+
+    delete: (id) =>
+      request(`/alerts/${id}`, {
+        method: "DELETE",
+      }),
+  },
+
   // Media Uploads
   upload: {
     file: async (file) => {

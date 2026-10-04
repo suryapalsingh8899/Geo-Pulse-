@@ -44,3 +44,44 @@ export const sendSmsOtp = async (phone, otp, countryCode = "+91") => {
     return { success: false, message: error.message };
   }
 };
+
+export const sendAlertSms = async (phones, alertTitle, alertSeverity) => {
+  const apiKey = process.env.TEXTBEE_API_KEY;
+  const deviceId = process.env.TEXTBEE_DEVICE_ID;
+
+  if (!apiKey || !deviceId) {
+    console.warn("⚠️ TEXTBEE_API_KEY or TEXTBEE_DEVICE_ID not configured, skipping alert SMS dispatch.");
+    return { success: false };
+  }
+
+  // Filter and format phone numbers
+  const validPhones = phones
+    .filter(p => p && p.trim().length >= 10)
+    .map(p => {
+      const sanitized = p.toString().replace(/\D/g, "");
+      return p.startsWith("+") ? p : `+91${sanitized.slice(-10)}`;
+    });
+
+  if (validPhones.length === 0) return { success: false, message: "No valid phone numbers." };
+
+  try {
+    const response = await fetch(`https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/send-sms`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        recipients: validPhones,
+        message: `EMERGENCY ALERT: ${alertTitle} (${alertSeverity.toUpperCase()}). Please stay safe and check the Geo-Pulse app for more details.`,
+      }),
+    });
+
+    const data = await response.json();
+    console.log(`📱 Textbee SMS Alert → ${validPhones.length} recipients | Response:`, data);
+    return { success: data.success || response.ok, data };
+  } catch (error) {
+    console.error("Textbee alert dispatch error:", error.message);
+    return { success: false, message: error.message };
+  }
+};

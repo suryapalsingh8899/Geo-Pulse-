@@ -8,6 +8,7 @@ import connectDB from "./src/config/db.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import reportRoutes from "./src/routes/reportRoutes.js";
 import eventRoutes from "./src/routes/eventRoutes.js";
+import alertRoutes from "./src/routes/alertRoutes.js";
 import uploadRoutes from "./src/routes/uploadRoutes.js";
 import { notFound, errorHandler } from "./src/middleware/errorHandler.js";
 
@@ -62,6 +63,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/alerts", alertRoutes);
 app.use("/api/upload", uploadRoutes);
 
 // Error Handling Middleware
