@@ -22,13 +22,13 @@ Local community concerns — damaged infrastructure, sanitation hazards, road ac
 - Pulls **live official data** from two major global APIs every 10 minutes:
   - **USGS** — Significant earthquakes & tsunami warnings worldwide
   - **NASA EONET** — Active wildfires, severe storms, cyclones, volcanoes, floods, and sea-ice events
-- Disasters appear on the globe as **coloured dots** based on severity:
-  - 🔴 Critical — `#ff1a1a`
-  - 🟠 High — `#ff6600`
-  - 🟡 Medium — `#ffcc00`
-- Each alert radiates a **pulsing radar wave animation** (independent per alert, staggered start, 30 fps) using CesiumJS `CallbackProperty` + `ColorMaterialProperty`
+- Disasters appear on the globe as **Emoji Billboards** for instant recognition:
+  - 💥 Earthquakes & 🌊 Tsunamis (USGS)
+  - 🔥 Wildfires, 🌋 Volcanoes, ⛈️ Severe Storms & 🌀 Cyclones (NASA)
+- **Zero-Lag Static Rendering:** Complex 3D wave geometries have been replaced with highly performant static emoji billboards, eliminating main-thread stuttering and saving mobile battery.
+- **Strictly Live Data:** Removed all historical/mock data. The map only tracks threats verified within the last 24–72 hours.
 - Alerts are **lazy-loaded** — fetched only when the user first opens Alert Mode, keeping initial page load fast
-- Server-side **10-minute in-memory cache** with `AbortSignal` timeouts prevents API hammering and backend stalls
+- Server-side **10-minute in-memory cache** with `AbortSignal` timeouts prevents API hammering and handles NASA API downtimes gracefully
 - Admin-created alerts trigger instant **SMS broadcasts** to all registered users via Textbee
 
 ### 🌐 Interactive 3D/2D Map Engine
