@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "../../index.css";
 import Map from "../map/Map";
 import LoginButton from "../buttons/LoginButton";
@@ -9,6 +9,7 @@ import ProfileModal from "../modals/ProfileModal";
 import AddReportModal from "../modals/AddReportModal";
 import AddEventModal from "../modals/AddEventModal";
 import PublicProfileModal from "../modals/PublicProfileModal";
+import InfoModal from "../modals/InfoModal";
 import api from "../../services/api";
 
 const initialMockReports = [
@@ -295,10 +296,38 @@ function HomePage() {
 
   const [reports, setReports] = useState(initialMockReports);
   const [events, setEvents] = useState(initialMockEvents);
-  const [alerts, setAlerts] = useState([]);
+  const [alerts, setAlerts] = useState(() => {
+    try {
+      const cached = localStorage.getItem("geopulse_cached_alerts");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
   const [alertsLoaded, setAlertsLoaded] = useState(false);
+
+  const loadAlertsData = useCallback(async () => {
+    try {
+      const res = await api.alerts.getAll();
+      const data = Array.isArray(res) ? res : res?.alerts ?? [];
+      setAlerts(data);
+      setAlertsLoaded(true);
+      try {
+        localStorage.setItem("geopulse_cached_alerts", JSON.stringify(data));
+      } catch (e) {
+        // storage quota fallback
+      }
+    } catch (err) {
+      console.error("Failed to load alerts:", err);
+    }
+  }, []);
+  const [currentPage, setCurrentPage] = useState({
+    icon: "🌍",
+    title: "Global Overview",
+  });
   const [userStats, setUserStats] = useState({ totalUpvotes: 0, totalDownvotes: 0 });
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [userName, setUserName] = useState("User");
@@ -338,8 +367,7 @@ function HomePage() {
   // Fetch initial data & verify session on mount
   useEffect(() => {
     const initData = async () => {
-      // Fetch reports and events in parallel — do NOT pre-fetch alerts
-      // Alerts are lazy-loaded the first time the user opens Alert Mode
+      // Fetch reports and events in parallel
       const [repRes, evRes] = await Promise.all([
         api.reports.getAll(),
         api.events.getAll(),
@@ -361,6 +389,9 @@ function HomePage() {
       }
     };
     initData();
+
+    // Background pre-fetch live alerts so Alert Mode is instantly ready on click
+    loadAlertsData();
 
     // 3. Verify user session if token exists
     const token = localStorage.getItem("geopulse_token");
@@ -743,13 +774,7 @@ function HomePage() {
           alerts={alerts}
           setAlerts={setAlerts}
           alertsLoaded={alertsLoaded}
-          onLoadAlerts={async () => {
-            if (alertsLoaded) return;
-            const res = await api.alerts.getAll();
-            const data = Array.isArray(res) ? res : res?.alerts ?? [];
-            setAlerts(data);
-            setAlertsLoaded(true);
-          }}
+          onLoadAlerts={loadAlertsData}
           onAddReport={handleAddReport}
           onAddEvent={handleAddEvent}
           onVote={handleVote}
@@ -761,14 +786,15 @@ function HomePage() {
           setUserName={handleUpdateUserName}
           isDarkMode={darkMode}
           setDarkMode={setDarkMode}
+          onCurrentPageChange={setCurrentPage}
         />
       </div>
 
       <header
         className="navbar glass-header"
-        style={{ background: "transparent", border: "none", boxShadow: "none" }}
+        style={{ background: "transparent", border: "none", boxShadow: "none", backdropFilter: "none", WebkitBackdropFilter: "none" }}
       >
-        <div className="navbar-left">
+        <div className="navbar-left" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div
             className="logo"
             style={{ textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}
@@ -776,7 +802,41 @@ function HomePage() {
             Geo Pulse
           </div>
         </div>
-        <div className="navbar-right">
+        <div className="navbar-right" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button
+            onClick={() => setShowInfoModal(true)}
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center",
+              width: "42px",
+              height: "42px",
+              padding: "0", 
+              borderRadius: "12px", 
+              border: "none", 
+              background: "transparent",
+              cursor: "pointer", 
+              boxShadow: "none",
+              color: "var(--text-color)"
+            }}
+            title="About Geo Pulse & User Guide"
+          >
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="24" 
+              height="24" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </button>
           {!isLoggedIn ? (
             <>
               <LoginButton
@@ -856,6 +916,10 @@ function HomePage() {
           onSubmit={submitEditEvent}
           onClose={() => setEditingEvent(null)}
         />
+      )}
+
+      {showInfoModal && (
+        <InfoModal onClose={() => setShowInfoModal(false)} />
       )}
 
       {toastMessage && (

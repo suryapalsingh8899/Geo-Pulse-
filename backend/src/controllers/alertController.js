@@ -8,12 +8,13 @@ import { sendAlertSms } from "../utils/smsService.js";
 // ─────────────────────────────────────────────
 let alertCache = null;
 let cacheTimestamp = 0;
+let isRefreshing = false;
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 async function fetchUSGSAlerts() {
   const res = await fetch(
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson",
-    { signal: AbortSignal.timeout(8000) }
+    { signal: AbortSignal.timeout(5000) }
   );
   if (!res.ok) return [];
   const data = await res.json();
@@ -34,7 +35,7 @@ async function fetchUSGSAlerts() {
 async function fetchEONETAlerts() {
   const res = await fetch(
     "https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=7",
-    { signal: AbortSignal.timeout(15000) }
+    { signal: AbortSignal.timeout(6000) }
   );
   if (!res.ok) return [];
   const data = await res.json();
@@ -73,27 +74,51 @@ async function fetchEONETAlerts() {
     .filter(Boolean);
 }
 
+async function refreshOfficialAlerts() {
+  if (isRefreshing) return alertCache || [];
+  isRefreshing = true;
+  try {
+    const [usgs, eonet] = await Promise.allSettled([
+      fetchUSGSAlerts(),
+      fetchEONETAlerts(),
+    ]);
+
+    const result = [
+      ...(usgs.status === "fulfilled" ? usgs.value : []),
+      ...(eonet.status === "fulfilled" ? eonet.value : []),
+    ];
+
+    if (result.length > 0 || !alertCache) {
+      alertCache = result;
+      cacheTimestamp = Date.now();
+    }
+    return alertCache;
+  } catch (err) {
+    console.error("Error refreshing official alerts:", err);
+    return alertCache || [];
+  } finally {
+    isRefreshing = false;
+  }
+}
+
 async function getOfficialAlerts() {
   const now = Date.now();
+  // Return immediately if cache is fresh
   if (alertCache && now - cacheTimestamp < CACHE_TTL_MS) {
-    return alertCache; // Serve from cache — saves ~1-2s per request
+    return alertCache;
   }
 
-  // Fetch both APIs in parallel
-  const [usgs, eonet] = await Promise.allSettled([
-    fetchUSGSAlerts(),
-    fetchEONETAlerts(),
-  ]);
+  // Stale-While-Revalidate: return stale cache in 0ms, refresh asynchronously
+  if (alertCache && alertCache.length > 0) {
+    refreshOfficialAlerts().catch((err) => console.error("Background alerts refresh error:", err.message));
+    return alertCache;
+  }
 
-  const result = [
-    ...(usgs.status === "fulfilled" ? usgs.value : []),
-    ...(eonet.status === "fulfilled" ? eonet.value : []),
-  ];
-
-  alertCache = result;
-  cacheTimestamp = now;
-  return result;
+  return await refreshOfficialAlerts();
 }
+
+// Warm up official alerts cache on startup so users never wait
+refreshOfficialAlerts().catch((err) => console.log("Initial alerts pre-warm note:", err.message));
 
 // ─────────────────────────────────────────────
 // GET /api/alerts

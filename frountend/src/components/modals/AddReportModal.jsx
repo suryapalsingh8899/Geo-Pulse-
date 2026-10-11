@@ -82,16 +82,18 @@ const AddReportModal = ({
         <button className="close-btn" onClick={onClose}>
           &times;
         </button>
-        <h2
-          className="modal-title"
-          style={{ fontSize: "1.8rem", marginBottom: "10px" }}
-        >
-          {initialData ? "Edit Report" : "Add Report"}
-        </h2>
-        <p className="modal-subtitle" style={{ marginBottom: "20px" }}>
-          Location pinned at: {location.lat.toFixed(4)},{" "}
-          {location.lng.toFixed(4)}
-        </p>
+        <div className="modal-header-hero">
+          <span className="modal-eyebrow warning">
+            📍 Community Report
+          </span>
+          <h2 className="modal-title">
+            {initialData ? "Edit Report" : "Post a Community Report"}
+          </h2>
+          <p className="modal-subtitle">
+            Location: {location.lat.toFixed(4)}, {location.lng.toFixed(4)} • Visible to everyone nearby
+          </p>
+          <div className="modal-header-divider warning" />
+        </div>
 
         <form onSubmit={handleSubmit} className="registration-form">
           <div className="form-group">

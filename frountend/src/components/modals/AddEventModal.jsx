@@ -157,21 +157,20 @@ const AddEventModal = ({ location, onSubmit, onClose, initialData = null }) => {
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
-          <h2
-            className="modal-title"
-            style={{ fontSize: "1.8rem", marginBottom: "10px" }}
-          >
-            {initialData ? "Edit Event" : "Post Event"}
-          </h2>
-          {!initialData &&
-            location &&
-            location.lat !== undefined &&
-            location.lng !== undefined && (
-              <p className="modal-subtitle" style={{ marginBottom: "20px" }}>
-                Location pinned at: {location.lat.toFixed(4)},{" "}
-                {location.lng.toFixed(4)}
-              </p>
-            )}
+          <div className="modal-header-hero">
+            <span className="modal-eyebrow pink">
+              🎟️ Community Event
+            </span>
+            <h2 className="modal-title">
+              {initialData ? "Edit Event" : "Create a Community Event"}
+            </h2>
+            <p className="modal-subtitle">
+              {!initialData && location && location.lat !== undefined && location.lng !== undefined
+                ? `Location: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)} • Invite people nearby`
+                : "Plan a meetup, music show, sports match, or gathering for the community"}
+            </p>
+            <div className="modal-header-divider pink" />
+          </div>
 
           <form onSubmit={handleSubmit} className="registration-form">
             <div className="form-group">

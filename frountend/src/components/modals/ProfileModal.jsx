@@ -86,6 +86,19 @@ const ProfileModal = ({
           &times;
         </button>
 
+        <div className="modal-header-hero centered">
+          <span className="modal-eyebrow purple">
+            👤 My Profile
+          </span>
+          <h2 className="modal-title">
+            My Account & Activity
+          </h2>
+          <p className="modal-subtitle">
+            View your details, check your community reports, and manage your events
+          </p>
+          <div className="modal-header-divider" />
+        </div>
+
         <div
           style={{
             display: "flex",

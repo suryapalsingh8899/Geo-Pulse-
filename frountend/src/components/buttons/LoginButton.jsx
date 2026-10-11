@@ -45,14 +45,38 @@ const LoginButton = ({
   return (
     <>
       <button
-        className="btn btn-outline"
-        style={{
-          background: "var(--glass-bg)",
-          border: "none",
-          color: "var(--text-color)",
-        }}
         onClick={onClick}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "8px",
+          padding: "8px 20px",
+          borderRadius: "12px",
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+          boxShadow: "none",
+          color: "var(--text-color)",
+          fontWeight: "600",
+          fontSize: "0.95rem"
+        }}
+        title="Login"
       >
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="18" 
+          height="18" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        >
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
         Login
       </button>
 
@@ -62,10 +86,16 @@ const LoginButton = ({
             <button className="close-btn" onClick={onClose}>
               ×
             </button>
-            <h2 className="modal-title">Welcome Back</h2>
-            <p className="modal-subtitle">
-              Login to access your Geo Pulse account.
-            </p>
+            <div className="modal-header-hero">
+              <span className="modal-eyebrow">
+                🔐 Sign In
+              </span>
+              <h2 className="modal-title">Welcome Back</h2>
+              <p className="modal-subtitle">
+                Enter your phone number to sign in and post community reports
+              </p>
+              <div className="modal-header-divider" />
+            </div>
 
             {step === 1 ? (
               <form onSubmit={onNext} className="registration-form">

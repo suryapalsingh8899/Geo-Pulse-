@@ -43,7 +43,41 @@ const RegisterButton = ({
 
   return (
     <>
-      <button className="btn btn-primary" onClick={onClick}>
+      <button 
+        onClick={onClick}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "8px",
+          padding: "8px 20px",
+          borderRadius: "12px",
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+          boxShadow: "none",
+          color: "var(--text-color)",
+          fontWeight: "600",
+          fontSize: "0.95rem"
+        }}
+        title="Register"
+      >
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width="18" 
+          height="18" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        >
+          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="8.5" cy="7" r="4"></circle>
+          <line x1="20" y1="8" x2="20" y2="14"></line>
+          <line x1="23" y1="11" x2="17" y2="11"></line>
+        </svg>
         Register
       </button>
 
@@ -53,10 +87,16 @@ const RegisterButton = ({
             <button className="close-btn" onClick={onClose}>
               ×
             </button>
-            <h2 className="modal-title">Create Account</h2>
-            <p className="modal-subtitle">
-              Join Geo Pulse to unlock the world.
-            </p>
+            <div className="modal-header-hero">
+              <span className="modal-eyebrow success">
+                ✨ Create an Account
+              </span>
+              <h2 className="modal-title">Join Geo Pulse</h2>
+              <p className="modal-subtitle">
+                Sign up to post community reports, host events, and get live disaster alerts
+              </p>
+              <div className="modal-header-divider" />
+            </div>
 
             {step === 1 ? (
               <form onSubmit={onNext} className="registration-form">

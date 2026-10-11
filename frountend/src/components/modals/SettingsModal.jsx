@@ -36,12 +36,18 @@ const SettingsModal = ({
         <button className="close-btn" onClick={onClose}>
           &times;
         </button>
-        <h2
-          className="modal-title"
-          style={{ fontSize: "1.5rem", marginBottom: "20px" }}
-        >
-          {t("settings")}
-        </h2>
+        <div className="modal-header-hero">
+          <span className="modal-eyebrow">
+            ⚙️ App Settings
+          </span>
+          <h2 className="modal-title">
+            {t("settings")}
+          </h2>
+          <p className="modal-subtitle">
+            Change your theme, location settings, and live disaster alerts
+          </p>
+          <div className="modal-header-divider" />
+        </div>
 
         <div
           style={{

@@ -133,6 +133,9 @@ function AlertDetailModal({ alert, onClose }) {
             />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
+            <span className="modal-eyebrow danger">
+              ⚠️ Official Disaster Alert
+            </span>
             <h2
               style={{
                 margin: "0 0 8px 0",

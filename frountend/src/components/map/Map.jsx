@@ -24,6 +24,43 @@ import SettingsModal from "../modals/SettingsModal";
 import { useTranslation } from "react-i18next";
 import api from "../../services/api";
 
+const emojiCanvasCache = {};
+let COLOR_CRITICAL = null;
+let COLOR_HIGH = null;
+let COLOR_MEDIUM = null;
+
+function getCachedEmojiCanvas(emoji, severity) {
+  const key = `${emoji}_${severity}`;
+  if (emojiCanvasCache[key]) {
+    return emojiCanvasCache[key];
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = 72;
+  canvas.height = 72;
+  const ctx = canvas.getContext("2d");
+
+  const alertColor =
+    severity === "critical"
+      ? "rgba(255, 26, 26, 0.6)"
+      : severity === "high"
+      ? "rgba(255, 102, 0, 0.6)"
+      : "rgba(255, 204, 0, 0.6)";
+
+  const gradient = ctx.createRadialGradient(36, 36, 0, 36, 36, 36);
+  gradient.addColorStop(0, alertColor);
+  gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 72, 72);
+
+  ctx.font = "40px 'Segoe UI Emoji', Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(emoji, 36, 40);
+
+  emojiCanvasCache[key] = canvas;
+  return canvas;
+}
+
 const mockEvents = [
   {
     id: 201,
@@ -98,6 +135,7 @@ function Map({
   setUserName,
   isDarkMode = true,
   setDarkMode,
+  onCurrentPageChange,
 }) {
   const { t } = useTranslation();
   const cesiumContainer = useRef(null);
@@ -141,6 +179,111 @@ function Map({
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
+
+  const handleOpenAlerts = () => {
+    setIsAlertMode(true);
+    setIsMobileMenuOpen(false);
+    if (!alertsLoaded && onLoadAlerts) {
+      setAlertsLoading(true);
+      Promise.resolve(onLoadAlerts()).finally(() => {
+        setAlertsLoading(false);
+      });
+    }
+  };
+
+  const currentPageInfo = isSelectingLocation
+    ? {
+        eyebrow: "Pick Location · Step 1 of 2",
+        icon: "📍",
+        title: "Pin Report Location",
+        subtitle: "Click anywhere on the globe to choose where this happened",
+        badge: "Click on Globe",
+        badgeBg: "rgba(45, 212, 191, 0.2)",
+        badgeColor: "#2dd4bf",
+        badgeBorder: "rgba(45, 212, 191, 0.45)",
+        borderColor: "rgba(45, 212, 191, 0.5)",
+        glow: "0 0 25px rgba(45, 212, 191, 0.28)",
+        accentColor: "#2dd4bf",
+      }
+    : isSelectingEventLocation
+    ? {
+        eyebrow: "Pick Venue · Step 1 of 2",
+        icon: "📌",
+        title: "Pin Event Location",
+        subtitle: "Click anywhere on the globe to choose your event place",
+        badge: "Click on Globe",
+        badgeBg: "rgba(236, 72, 153, 0.2)",
+        badgeColor: "#ec4899",
+        badgeBorder: "rgba(236, 72, 153, 0.45)",
+        borderColor: "rgba(236, 72, 153, 0.5)",
+        glow: "0 0 25px rgba(236, 72, 153, 0.28)",
+        accentColor: "#ec4899",
+      }
+    : isAlertMode
+    ? {
+        eyebrow: "Live Disaster Radar",
+        icon: "⚠️",
+        title: "Disaster Alerts",
+        subtitle: "Live earthquakes & natural hazard warnings from USGS and NASA",
+        badge: alertsLoading ? "Loading..." : `${alerts.length} Active Alerts`,
+        badgeBg: "rgba(239, 68, 68, 0.2)",
+        badgeColor: "#f87171",
+        badgeBorder: "rgba(239, 68, 68, 0.45)",
+        borderColor: "rgba(239, 68, 68, 0.5)",
+        glow: "0 0 30px rgba(239, 68, 68, 0.3)",
+        accentColor: "#f87171",
+      }
+    : isReportMode
+    ? {
+        eyebrow: "Community Reports",
+        icon: "📋",
+        title: "Community Reports",
+        subtitle: "Local road problems, accidents, waterlogging & citizen updates",
+        badge: `${reports.length} Reports`,
+        badgeBg: "rgba(245, 158, 11, 0.2)",
+        badgeColor: "#fbbf24",
+        badgeBorder: "rgba(245, 158, 11, 0.45)",
+        borderColor: "rgba(245, 158, 11, 0.5)",
+        glow: "0 0 25px rgba(245, 158, 11, 0.25)",
+        accentColor: "#fbbf24",
+      }
+    : isEventMode
+    ? {
+        eyebrow: "Local Events & Meetups",
+        icon: "🎟️",
+        title: "Local Events",
+        subtitle: "Community gatherings, festivals, music & upcoming meetups",
+        badge: `${events.length} Events`,
+        badgeBg: "rgba(236, 72, 153, 0.2)",
+        badgeColor: "#f472b6",
+        badgeBorder: "rgba(236, 72, 153, 0.45)",
+        borderColor: "rgba(236, 72, 153, 0.5)",
+        glow: "0 0 25px rgba(236, 72, 153, 0.25)",
+        accentColor: "#f472b6",
+      }
+    : {
+        eyebrow: "Live 3D World Map",
+        icon: "🌍",
+        title: "Global Overview",
+        subtitle: "Real-time world view with community reports and live disaster alerts",
+        badge: "Live Earth",
+        badgeBg: "rgba(56, 189, 248, 0.16)",
+        badgeColor: "#38bdf8",
+        badgeBorder: "rgba(56, 189, 248, 0.4)",
+        borderColor: "rgba(56, 189, 248, 0.4)",
+        glow: "0 0 24px rgba(56, 189, 248, 0.2)",
+        accentColor: "#38bdf8",
+      };
+
+  useEffect(() => {
+    if (onCurrentPageChange) {
+      onCurrentPageChange(currentPageInfo);
+    }
+  }, [
+    currentPageInfo.title,
+    currentPageInfo.badge,
+    onCurrentPageChange,
+  ]);
 
   useEffect(() => {
     let watchId;
@@ -514,33 +657,6 @@ function Map({
       const heatmapImage = createHeatmapImage();
       const seenHeatmapImage = createSeenHeatmapImage();
 
-      const createEmojiImage = (emoji, severity) => {
-        const canvas = document.createElement("canvas");
-        canvas.width = 72;
-        canvas.height = 72;
-        const ctx = canvas.getContext("2d");
-        
-        const alertColor =
-            severity === "critical" ? "rgba(255, 26, 26, 0.6)" :
-            severity === "high"     ? "rgba(255, 102, 0, 0.6)" :
-                                      "rgba(255, 204, 0, 0.6)";
-
-        // Draw soft glowing background
-        const gradient = ctx.createRadialGradient(36, 36, 0, 36, 36, 36);
-        gradient.addColorStop(0, alertColor);
-        gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 72, 72);
-
-        // Draw emoji
-        ctx.font = "40px 'Segoe UI Emoji', Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(emoji, 36, 40);
-
-        return canvas;
-      };
-
       if (isReportMode) {
         reports.forEach((report) => {
           const id = report.id || report._id;
@@ -551,7 +667,6 @@ function Map({
               image: report.seen ? seenHeatmapImage : heatmapImage,
               width: 45,
               height: 45,
-              heightReference: HeightReference.CLAMP_TO_GROUND,
               disableDepthTestDistance: 1.2e7,
             },
             description: report.description,
@@ -567,27 +682,30 @@ function Map({
               image: event.seen ? seenHeatmapImage : heatmapImage,
               width: 55,
               height: 55,
-              heightReference: HeightReference.CLAMP_TO_GROUND,
               disableDepthTestDistance: 1.2e7,
             },
             description: event.description,
           });
         });
       } else if (isAlertMode) {
-        // We collect all update functions to execute them in a single global interval
-        const updateFunctions = [];
+        if (!COLOR_CRITICAL) {
+          COLOR_CRITICAL = Color.fromCssColorString("#ff1a1a");
+          COLOR_HIGH = Color.fromCssColorString("#ff6600");
+          COLOR_MEDIUM = Color.fromCssColorString("#ffcc00");
+        }
 
-        alerts.forEach((alertItem, idx) => {
+        // Suspend entity events during batch insertion for maximum Cesium rendering performance
+        viewer.entities.suspendEvents();
+
+        alerts.forEach((alertItem) => {
           const id = alertItem.id || alertItem._id;
-          // Define danger radius in meters based on severity
           const radii = { critical: 500000, high: 300000, medium: 150000, low: 50000 };
           const maxRadius = radii[alertItem.severity || "high"] || 300000;
           
-          // Pick colour by severity
           const alertColor =
-            alertItem.severity === "critical" ? Color.fromCssColorString("#ff1a1a") :
-            alertItem.severity === "high"     ? Color.fromCssColorString("#ff6600") :
-                                                Color.fromCssColorString("#ffcc00");
+            alertItem.severity === "critical" ? COLOR_CRITICAL :
+            alertItem.severity === "high"     ? COLOR_HIGH :
+                                                COLOR_MEDIUM;
           const typeStr = (alertItem.type || "").toLowerCase().replace(/_/g, " ");
           let emoji = "⚠️";
           if (typeStr.includes("earthquake")) emoji = "💥";
@@ -601,7 +719,7 @@ function Map({
           else if (typeStr.includes("ice") || typeStr.includes("snow")) emoji = "🧊";
           else if (typeStr.includes("dust") || typeStr.includes("haze")) emoji = "💨";
 
-          const emojiCanvas = createEmojiImage(emoji, alertItem.severity);
+          const emojiCanvas = getCachedEmojiCanvas(emoji, alertItem.severity);
           const baseSize = alertItem.severity === "critical" ? 44 : 32;
 
           viewer.entities.add({
@@ -612,11 +730,9 @@ function Map({
               image: emojiCanvas,
               width: baseSize,
               height: baseSize,
-              heightReference: HeightReference.CLAMP_TO_GROUND,
               disableDepthTestDistance: 1.2e7,
             },
             ellipse: {
-              // Static geometry completely eliminates polygon rebuild lag
               semiMinorAxis: maxRadius,
               semiMajorAxis: maxRadius,
               material: alertColor.withAlpha(0.15),
@@ -626,7 +742,9 @@ function Map({
           });
         });
 
-        // No continuous animation needed for alerts anymore, just render once
+        // Resume events once all alert entities are registered
+        viewer.entities.resumeEvents();
+
         if (viewerInstance.current && !viewerInstance.current.isDestroyed()) {
           viewerInstance.current.scene.requestRender();
         }
@@ -907,81 +1025,65 @@ function Map({
           document.body,
         )}
 
-      {isSelectingLocation && (
+      {/* ── Top Page Heading Banner (Guarantees user always knows current page) ── */}
+      <div className="geo-current-page-header" role="banner" aria-label="Current Page Heading">
         <div
+          className="page-header-card"
           style={{
-            position: "absolute",
-            top: "calc(var(--header-height, 80px) + 12px)",
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "var(--glass-bg-solid)",
-            padding: "12px 20px",
-            borderRadius: "30px",
-            color: "var(--text-color)",
-            zIndex: 100,
-            border: "1px solid var(--primary)",
-            boxShadow: "0 0 20px rgba(45, 212, 191, 0.5)",
-            whiteSpace: "nowrap",
-            fontSize: "clamp(0.8rem, 3vw, 1rem)",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
+            borderColor: currentPageInfo.borderColor,
+            boxShadow: `0 12px 36px rgba(0, 0, 0, 0.5), ${currentPageInfo.glow || "none"}`,
           }}
         >
-          📍 Tap on the map to pin the report location!
-          <button
+          <div
+            className="page-header-icon-wrap"
             style={{
-              background: "transparent",
-              border: "none",
-              color: "#ef4444",
-              cursor: "pointer",
-              fontWeight: "bold",
-              fontSize: "inherit",
+              borderColor: currentPageInfo.borderColor,
+              background: currentPageInfo.badgeBg,
             }}
-            onClick={() => setIsSelectingLocation(false)}
           >
-            Cancel
-          </button>
+            <span>{currentPageInfo.icon}</span>
+          </div>
+          <div className="page-header-text">
+            {currentPageInfo.eyebrow && (
+              <span
+                className="page-header-eyebrow"
+                style={{ color: currentPageInfo.accentColor }}
+              >
+                {currentPageInfo.eyebrow}
+              </span>
+            )}
+            <div className="page-header-title-row">
+              <h1 className="page-header-title">{currentPageInfo.title}</h1>
+              {currentPageInfo.badge && (
+                <span
+                  className="page-header-badge"
+                  style={{
+                    backgroundColor: currentPageInfo.badgeBg,
+                    color: currentPageInfo.badgeColor,
+                    borderColor: currentPageInfo.badgeBorder,
+                  }}
+                >
+                  <span className="pulse-dot" style={{ backgroundColor: currentPageInfo.badgeColor }} />
+                  {currentPageInfo.badge}
+                </span>
+              )}
+            </div>
+            <p className="page-header-desc">{currentPageInfo.subtitle}</p>
+          </div>
+          {(isSelectingLocation || isSelectingEventLocation) && (
+            <button
+              className="btn-cancel-pinning"
+              onClick={() => {
+                setIsSelectingLocation(false);
+                setIsSelectingEventLocation(false);
+              }}
+              title="Cancel coordinate selection"
+            >
+              ✕ Cancel
+            </button>
+          )}
         </div>
-      )}
-
-      {isSelectingEventLocation && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(var(--header-height, 80px) + 12px)",
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "var(--glass-bg-solid)",
-            padding: "12px 20px",
-            borderRadius: "30px",
-            color: "var(--text-color)",
-            zIndex: 100,
-            border: "1px solid var(--secondary)",
-            boxShadow: "0 0 20px rgba(236, 72, 153, 0.5)",
-            whiteSpace: "nowrap",
-            fontSize: "clamp(0.8rem, 3vw, 1rem)",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-          }}
-        >
-          📌 Tap on the map to pin the event location!
-          <button
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "#ef4444",
-              cursor: "pointer",
-              fontWeight: "bold",
-              fontSize: "inherit",
-            }}
-            onClick={() => setIsSelectingEventLocation(false)}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
+      </div>
 
       {newReportLocation &&
         createPortal(
@@ -1040,21 +1142,29 @@ function Map({
             pointerEvents: "none", // so it doesn't block map clicks
           }}
         >
-          <h3
-            style={{
-              margin: 0,
-              fontSize: "0.95rem",
-              color: "#fff",
-              borderBottom: "1px solid rgba(255,255,255,0.1)",
-              paddingBottom: "8px",
-              marginBottom: "2px",
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              fontWeight: 700
-            }}
-          >
-            Live Trackers
-          </h3>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px", marginBottom: "2px" }}>
+            <h3
+              style={{
+                margin: 0,
+                fontSize: "0.95rem",
+                color: "#fff",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                fontWeight: 700
+              }}
+            >
+              Live Trackers
+            </h3>
+            {alertsLoading ? (
+              <span style={{ fontSize: "0.75rem", color: "#60a5fa", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#60a5fa", animation: "pulse 1.5s infinite" }} /> Syncing...
+              </span>
+            ) : (
+              <span style={{ fontSize: "0.75rem", color: "#4ade80", fontWeight: 600 }}>
+                ● {alerts.length} Active
+              </span>
+            )}
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
             <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(255,100,100,0.5))" }}>💥</span> Earthquakes
           </div>
@@ -1191,50 +1301,55 @@ function Map({
                     <button
                       className="btn btn-pink footer-btn"
                       onClick={() => { setIsEventMode(true); setIsMobileMenuOpen(false); }}
+                      style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}
                     >
+                      <span style={{ fontSize: "1.1rem" }}>🎟️</span>
                       {t("events")}
                     </button>
                     <button
-                      className="btn btn-danger footer-btn"
-                      onClick={async () => {
-                        if (!alertsLoaded && onLoadAlerts) await onLoadAlerts();
-                        setIsAlertMode(true);
-                        setIsMobileMenuOpen(false);
-                      }}
+                      className="btn btn-blue footer-btn"
+                      onClick={() => { setIsSettingsOpen(true); setIsMobileMenuOpen(false); }}
+                      style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}
                     >
-                      Alerts
+                      <span style={{ fontSize: "1.1rem" }}>⚙️</span>
+                      Settings
                     </button>
                     <button
-                      className="btn btn-outline footer-btn"
-                      onClick={() => { alert("Coming soon!"); setIsMobileMenuOpen(false); }}
+                      className="btn btn-danger footer-btn"
+                      onClick={handleOpenAlerts}
+                      style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}
                     >
-                      Info
+                      <span style={{ fontSize: "1.1rem" }}>⚠️</span>
+                      Alerts
                     </button>
                   </div>
                 </>
               )}
 
-              {/* Desktop-only: Events, Alerts, Info (hidden on mobile) */}
+              {/* Desktop-only: Events, Settings (hidden on mobile) */}
               <button
                 className="btn btn-pink footer-btn footer-desktop-only"
                 onClick={() => setIsEventMode(true)}
+                style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}
               >
+                <span style={{ fontSize: "1.1rem" }}>🎟️</span>
                 {t("events")}
               </button>
               <button
-                className="btn btn-danger footer-btn footer-desktop-only"
-                onClick={async () => {
-                  if (!alertsLoaded && onLoadAlerts) await onLoadAlerts();
-                  setIsAlertMode(true);
-                }}
+                className="btn btn-blue footer-btn footer-desktop-only"
+                onClick={() => setIsSettingsOpen(true)}
+                style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}
               >
-                Alerts
+                <span style={{ fontSize: "1.1rem" }}>⚙️</span>
+                Settings
               </button>
               <button
-                className="btn btn-outline footer-btn footer-desktop-only"
-                onClick={() => alert("Coming soon!")}
+                className="btn btn-danger footer-btn footer-desktop-only"
+                onClick={handleOpenAlerts}
+                style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}
               >
-                Info
+                <span style={{ fontSize: "1.1rem" }}>⚠️</span>
+                Alerts
               </button>
             </>
           )}
