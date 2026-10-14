@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   Viewer,
@@ -12,6 +12,8 @@ import {
   CallbackProperty,
   ColorMaterialProperty,
   HeightReference,
+  SceneMode,
+  VerticalOrigin,
 } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import ReportsButton from "../buttons/ReportsButton";
@@ -136,6 +138,10 @@ function Map({
   isDarkMode = true,
   setDarkMode,
   onCurrentPageChange,
+  searchTarget = null,
+  onClearSearchTarget,
+  is2DMode = false,
+  onToggle2D3D,
 }) {
   const { t } = useTranslation();
   const cesiumContainer = useRef(null);
@@ -179,6 +185,57 @@ function Map({
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
+  const [isLiveTrackersOpen, setIsLiveTrackersOpen] = useState(false);
+  const [activeTrackerFilter, setActiveTrackerFilter] = useState("all");
+  const liveTrackersDropdownRef = useRef(null);
+
+  const trackerOptions = [
+    { key: "earthquake", label: "Earthquakes", icon: "💥" },
+    { key: "volcano", label: "Volcanoes", icon: "🌋" },
+    { key: "tsunami", label: "Tsunamis", icon: "🌊" },
+    { key: "wildfire", label: "Wildfires", icon: "🔥" },
+    { key: "storm", label: "Severe Storms", icon: "⛈️" },
+    { key: "cyclone", label: "Cyclones", icon: "🌀" },
+  ];
+
+  const trackerCounts = useMemo(() => {
+    const counts = {
+      all: alerts.length,
+      earthquake: 0,
+      volcano: 0,
+      tsunami: 0,
+      wildfire: 0,
+      storm: 0,
+      cyclone: 0,
+    };
+    alerts.forEach((a) => {
+      const t = (a.type || "").toLowerCase().replace(/_/g, " ");
+      if (t.includes("earthquake")) counts.earthquake++;
+      else if (t.includes("volcano")) counts.volcano++;
+      else if (t.includes("tsunami")) counts.tsunami++;
+      else if (t.includes("wildfire") || t.includes("fire")) counts.wildfire++;
+      else if (t.includes("storm")) counts.storm++;
+      else if (t.includes("cyclone") || t.includes("hurricane")) counts.cyclone++;
+    });
+    return counts;
+  }, [alerts]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        liveTrackersDropdownRef.current &&
+        !liveTrackersDropdownRef.current.contains(e.target)
+      ) {
+        setIsLiveTrackersOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, []);
 
   const handleOpenAlerts = () => {
     setIsAlertMode(true);
@@ -465,6 +522,7 @@ function Map({
       ];
 
       const enforcePitch = () => {
+        if (viewer.scene.mode !== SceneMode.SCENE3D) return;
         if (viewer.camera.pitch > CesiumMath.toRadians(-20)) {
           viewer.camera.setView({
             orientation: {
@@ -479,6 +537,11 @@ function Map({
 
       // Custom smooth inertia zoom for trackpads
       const handleTick = () => {
+        // Continuous render frames during 2D/3D morphing transition
+        if (viewer.scene.mode === SceneMode.MORPHING) {
+          viewer.scene.requestRender();
+        }
+
         if (Math.abs(zoomVelocityRef.current) > 0.01) {
           if (zoomVelocityRef.current > 0) {
             if (viewer.camera.positionCartographic.height >= 10000000) {
@@ -506,6 +569,139 @@ function Map({
       }
     };
   }, []); // Empty dependency array ensures viewer is created only once
+
+  // Handle 2D / 3D mode switching using Cesium's morphTo2D and morphTo3D
+  useEffect(() => {
+    if (!viewerInstance.current) return;
+    const viewer = viewerInstance.current;
+    if (viewer.scene.mode === SceneMode.MORPHING) return;
+
+    if (is2DMode && viewer.scene.mode !== SceneMode.SCENE2D) {
+      viewer.scene.morphTo2D(1.2);
+      viewer.scene.requestRender();
+    } else if (!is2DMode && viewer.scene.mode !== SceneMode.SCENE3D) {
+      viewer.scene.morphTo3D(1.2);
+      viewer.scene.requestRender();
+    }
+  }, [is2DMode]);
+
+  // Handle morph complete listener to ensure Cesium renders the final transformed state
+  useEffect(() => {
+    if (!viewerInstance.current) return;
+    const viewer = viewerInstance.current;
+    const handleMorphComplete = () => {
+      viewer.scene.requestRender();
+    };
+    viewer.scene.morphComplete.addEventListener(handleMorphComplete);
+    return () => {
+      if (viewer && !viewer.isDestroyed()) {
+        viewer.scene.morphComplete.removeEventListener(handleMorphComplete);
+      }
+    };
+  }, []);
+
+  // Helper to create a search marker pin canvas
+  const createSearchPinCanvas = (title) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 180;
+    canvas.height = 72;
+    const ctx = canvas.getContext("2d");
+
+    ctx.shadowColor = "rgba(56, 189, 248, 0.7)";
+    ctx.shadowBlur = 10;
+
+    ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(10, 8, 160, 36, 18);
+    } else {
+      ctx.rect(10, 8, 160, 36);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(82, 44);
+    ctx.lineTo(98, 44);
+    ctx.lineTo(90, 56);
+    ctx.closePath();
+    ctx.fillStyle = "#38bdf8";
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#38bdf8";
+    ctx.font = "14px 'Segoe UI Emoji', sans-serif";
+    ctx.fillText("📍", 24, 30);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 12px 'Outfit', sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    const label = title && title.length > 14 ? title.substring(0, 13) + "…" : (title || "Location");
+    ctx.fillText(label, 44, 26);
+
+    return canvas;
+  };
+
+  // Fly to searched location
+  useEffect(() => {
+    if (!searchTarget || !viewerInstance.current) return;
+    const viewer = viewerInstance.current;
+    const { lat, lng, name, boundingBox } = searchTarget;
+
+    const oldPin = viewer.entities.getById("search-location-pin");
+    if (oldPin) viewer.entities.remove(oldPin);
+
+    let targetAltitude = 25000.0;
+    if (boundingBox && boundingBox.length === 4) {
+      const south = parseFloat(boundingBox[0]);
+      const north = parseFloat(boundingBox[1]);
+      const west = parseFloat(boundingBox[2]);
+      const east = parseFloat(boundingBox[3]);
+      const latDiff = Math.abs(north - south);
+      const lonDiff = Math.abs(east - west);
+      const maxSpan = Math.max(latDiff, lonDiff);
+      targetAltitude = Math.min(Math.max(maxSpan * 111000 * 1.2, 5000), 5000000);
+    }
+
+    const pinCanvas = createSearchPinCanvas(name);
+    viewer.entities.add({
+      id: "search-location-pin",
+      position: Cartesian3.fromDegrees(lng, lat),
+      billboard: {
+        image: pinCanvas,
+        verticalOrigin: VerticalOrigin.BOTTOM,
+        heightReference: HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: 1.2e7,
+      },
+      description: name || "Searched Location",
+    });
+
+    viewer.camera.flyTo({
+      destination: Cartesian3.fromDegrees(lng, lat, targetAltitude),
+      duration: 1.8,
+      complete: () => {
+        viewer.scene.requestRender();
+      },
+    });
+
+    viewer.scene.requestRender();
+
+    const timer = setTimeout(() => {
+      if (viewerInstance.current && !viewerInstance.current.isDestroyed()) {
+        const pin = viewerInstance.current.entities.getById("search-location-pin");
+        if (pin) {
+          viewerInstance.current.entities.remove(pin);
+          viewerInstance.current.scene.requestRender();
+        }
+      }
+      if (onClearSearchTarget) onClearSearchTarget();
+    }, 15000);
+
+    return () => clearTimeout(timer);
+  }, [searchTarget]);
 
   // Effect to toggle dark/light mode on the fly
   useEffect(() => {
@@ -697,7 +893,20 @@ function Map({
         // Suspend entity events during batch insertion for maximum Cesium rendering performance
         viewer.entities.suspendEvents();
 
-        alerts.forEach((alertItem) => {
+        const displayedAlerts = activeTrackerFilter === "all"
+          ? alerts
+          : alerts.filter((alertItem) => {
+              const typeStr = (alertItem.type || "").toLowerCase().replace(/_/g, " ");
+              if (activeTrackerFilter === "earthquake") return typeStr.includes("earthquake");
+              if (activeTrackerFilter === "volcano") return typeStr.includes("volcano");
+              if (activeTrackerFilter === "tsunami") return typeStr.includes("tsunami");
+              if (activeTrackerFilter === "wildfire") return typeStr.includes("wildfire") || typeStr.includes("fire");
+              if (activeTrackerFilter === "storm") return typeStr.includes("storm");
+              if (activeTrackerFilter === "cyclone") return typeStr.includes("cyclone") || typeStr.includes("hurricane");
+              return true;
+            });
+
+        displayedAlerts.forEach((alertItem) => {
           const id = alertItem.id || alertItem._id;
           const radii = { critical: 500000, high: 300000, medium: 150000, low: 50000 };
           const maxRadius = radii[alertItem.severity || "high"] || 300000;
@@ -771,7 +980,7 @@ function Map({
       else if (pulseInterval) clearInterval(pulseInterval);
       else if (pulseInterval) clearInterval(pulseInterval);
     };
-  }, [isReportMode, isEventMode, isAlertMode, reports, events, alerts]);
+  }, [isReportMode, isEventMode, isAlertMode, reports, events, alerts, activeTrackerFilter]);
 
   useEffect(() => {
     if (!viewerInstance.current) return;
@@ -1025,65 +1234,38 @@ function Map({
           document.body,
         )}
 
-      {/* ── Top Page Heading Banner (Guarantees user always knows current page) ── */}
-      <div className="geo-current-page-header" role="banner" aria-label="Current Page Heading">
-        <div
-          className="page-header-card"
-          style={{
-            borderColor: currentPageInfo.borderColor,
-            boxShadow: `0 12px 36px rgba(0, 0, 0, 0.5), ${currentPageInfo.glow || "none"}`,
-          }}
-        >
-          <div
-            className="page-header-icon-wrap"
-            style={{
-              borderColor: currentPageInfo.borderColor,
-              background: currentPageInfo.badgeBg,
-            }}
-          >
-            <span>{currentPageInfo.icon}</span>
-          </div>
-          <div className="page-header-text">
-            {currentPageInfo.eyebrow && (
-              <span
-                className="page-header-eyebrow"
-                style={{ color: currentPageInfo.accentColor }}
-              >
-                {currentPageInfo.eyebrow}
-              </span>
-            )}
-            <div className="page-header-title-row">
-              <h1 className="page-header-title">{currentPageInfo.title}</h1>
-              {currentPageInfo.badge && (
-                <span
-                  className="page-header-badge"
-                  style={{
-                    backgroundColor: currentPageInfo.badgeBg,
-                    color: currentPageInfo.badgeColor,
-                    borderColor: currentPageInfo.badgeBorder,
-                  }}
-                >
-                  <span className="pulse-dot" style={{ backgroundColor: currentPageInfo.badgeColor }} />
-                  {currentPageInfo.badge}
-                </span>
-              )}
+      {/* ── Mode Indicator Pill (Normal, clean, only shows when pinning or report/event mode is selected) ── */}
+      {(isSelectingLocation || isSelectingEventLocation || isReportMode || isEventMode) && (
+        <div className="geo-current-page-header" role="banner" aria-label="Current Mode">
+          <div className="page-header-card">
+            <div className="page-header-icon-wrap">
+              <span>{currentPageInfo.icon}</span>
             </div>
-            <p className="page-header-desc">{currentPageInfo.subtitle}</p>
+            <div className="page-header-text">
+              <div className="page-header-title-row">
+                <span className="page-header-title">{currentPageInfo.title}</span>
+                {currentPageInfo.badge && (
+                  <span className="page-header-badge">
+                    {currentPageInfo.badge}
+                  </span>
+                )}
+              </div>
+            </div>
+            {(isSelectingLocation || isSelectingEventLocation) && (
+              <button
+                className="btn-cancel-pinning"
+                onClick={() => {
+                  setIsSelectingLocation(false);
+                  setIsSelectingEventLocation(false);
+                }}
+                title="Cancel selection"
+              >
+                ✕ Cancel
+              </button>
+            )}
           </div>
-          {(isSelectingLocation || isSelectingEventLocation) && (
-            <button
-              className="btn-cancel-pinning"
-              onClick={() => {
-                setIsSelectingLocation(false);
-                setIsSelectingEventLocation(false);
-              }}
-              title="Cancel coordinate selection"
-            >
-              ✕ Cancel
-            </button>
-          )}
         </div>
-      </div>
+      )}
 
       {newReportLocation &&
         createPortal(
@@ -1121,95 +1303,141 @@ function Map({
           document.body,
         )}
 
+      {/* Live Trackers Dropdown Menu in Alert Mode */}
       {isAlertMode && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(var(--header-height, 80px) + 20px)",
-            left: "20px",
-            background: "rgba(20, 25, 35, 0.85)",
-            backdropFilter: "blur(12px)",
-            padding: "16px 20px",
-            borderRadius: "16px",
-            color: "var(--text-color)",
-            zIndex: 90,
-            border: "1px solid rgba(255,255,255,0.1)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "12px",
-            fontSize: "0.85rem",
-            pointerEvents: "none", // so it doesn't block map clicks
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px", marginBottom: "2px" }}>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: "0.95rem",
-                color: "#fff",
-                textTransform: "uppercase",
-                letterSpacing: "1px",
-                fontWeight: 700
-              }}
-            >
-              Live Trackers
-            </h3>
+        <div className="live-tracker-dropdown-container" ref={liveTrackersDropdownRef}>
+          <button
+            type="button"
+            className={`live-tracker-dropdown-btn ${isLiveTrackersOpen ? "active" : ""}`}
+            onClick={() => setIsLiveTrackersOpen((prev) => !prev)}
+            aria-expanded={isLiveTrackersOpen}
+            aria-haspopup="true"
+            title="Live Natural Disaster Trackers"
+          >
+            <span className="tracker-btn-icon">📡</span>
+            <span className="tracker-btn-label">
+              {activeTrackerFilter === "all"
+                ? "Live Trackers"
+                : trackerOptions.find((o) => o.key === activeTrackerFilter)?.label || "Live Trackers"}
+            </span>
             {alertsLoading ? (
-              <span style={{ fontSize: "0.75rem", color: "#60a5fa", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#60a5fa", animation: "pulse 1.5s infinite" }} /> Syncing...
+              <span className="tracker-badge-sync">
+                <span className="sync-pulse-dot" /> Syncing
               </span>
             ) : (
-              <span style={{ fontSize: "0.75rem", color: "#4ade80", fontWeight: 600 }}>
-                ● {alerts.length} Active
+              <span className="tracker-badge-count">
+                ● {trackerCounts[activeTrackerFilter] || 0} Active
               </span>
             )}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
-            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(255,100,100,0.5))" }}>💥</span> Earthquakes
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
-            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(255,100,100,0.5))" }}>🌋</span> Volcanoes
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
-            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(100,200,255,0.5))" }}>🌊</span> Tsunamis
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
-            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(255,150,50,0.5))" }}>🔥</span> Wildfires
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
-            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(150,150,255,0.5))" }}>⛈️</span> Severe Storms
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 600 }}>
-            <span style={{ fontSize: "1.2rem", filter: "drop-shadow(0 0 5px rgba(200,200,200,0.5))" }}>🌀</span> Cyclones
-          </div>
+            <svg
+              className={`tracker-chevron-icon ${isLiveTrackersOpen ? "open" : ""}`}
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
 
-          <h3
-            style={{
-              margin: "8px 0 0 0",
-              fontSize: "0.85rem",
-              color: "rgba(255,255,255,0.7)",
-              borderBottom: "1px solid rgba(255,255,255,0.1)",
-              paddingBottom: "4px",
-              marginBottom: "2px",
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              fontWeight: 600
-            }}
-          >
-            Severity Level
-          </h3>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 500, fontSize: "0.8rem", color: "rgba(255,255,255,0.8)" }}>
-            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff1a1a", boxShadow: "0 0 8px #ff1a1a" }}></div> Critical
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 500, fontSize: "0.8rem", color: "rgba(255,255,255,0.8)" }}>
-            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff6600", boxShadow: "0 0 8px #ff6600" }}></div> High
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: 500, fontSize: "0.8rem", color: "rgba(255,255,255,0.8)" }}>
-            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ffcc00", boxShadow: "0 0 8px #ffcc00" }}></div> Medium / Low
-          </div>
+          {isLiveTrackersOpen && (
+            <div className="live-tracker-menu-card glass-card">
+              <div className="tracker-menu-header">
+                <div className="tracker-menu-title">
+                  <span>DISASTER TRACKERS</span>
+                  <span className="tracker-source-tag">NASA • USGS</span>
+                </div>
+                {activeTrackerFilter !== "all" && (
+                  <button
+                    type="button"
+                    className="tracker-reset-btn"
+                    onClick={() => {
+                      setActiveTrackerFilter("all");
+                      setIsLiveTrackersOpen(false);
+                    }}
+                    title="Show all trackers"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+
+              <div className="tracker-options-list">
+                <button
+                  type="button"
+                  className={`tracker-option-row ${activeTrackerFilter === "all" ? "selected" : ""}`}
+                  onClick={() => {
+                    setActiveTrackerFilter("all");
+                    setIsLiveTrackersOpen(false);
+                  }}
+                >
+                  <span className="tracker-opt-icon">🌐</span>
+                  <span className="tracker-opt-name">All Active Trackers</span>
+                  <span className="tracker-opt-badge">{trackerCounts.all}</span>
+                </button>
+
+                {trackerOptions.map((opt) => {
+                  const count = trackerCounts[opt.key] || 0;
+                  const isSelected = activeTrackerFilter === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      className={`tracker-option-row ${isSelected ? "selected" : ""}`}
+                      onClick={() => {
+                        setActiveTrackerFilter(opt.key);
+                        setIsLiveTrackersOpen(false);
+                      }}
+                    >
+                      <span className="tracker-opt-icon">{opt.icon}</span>
+                      <span className="tracker-opt-name">{opt.label}</span>
+                      <span className={`tracker-opt-badge ${count > 0 ? "has-alerts" : "empty"}`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="tracker-menu-divider" />
+
+              <div className="tracker-menu-subtitle">Severity Level</div>
+              <div className="tracker-severity-list">
+                <div className="severity-row">
+                  <div className="severity-dot critical" /> Critical
+                </div>
+                <div className="severity-row">
+                  <div className="severity-dot high" /> High
+                </div>
+                <div className="severity-row">
+                  <div className="severity-dot medium" /> Medium / Low
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Floating 2D / 3D Projection Toggle Button */}
+      <div className="floating-map-controls">
+        <button
+          type="button"
+          className={`floating-projection-btn ${is2DMode ? "mode-2d" : "mode-3d"}`}
+          onClick={() => {
+            if (onToggle2D3D) onToggle2D3D(!is2DMode);
+          }}
+          title={is2DMode ? "Switch to 3D Globe" : "Switch to 2D Flat Map"}
+          aria-label={is2DMode ? "Switch to 3D Globe" : "Switch to 2D Flat Map"}
+        >
+          <span className="proj-icon">{is2DMode ? "🌐" : "🗺️"}</span>
+          <span className="proj-text">{is2DMode ? "Switch to 3D" : "Switch to 2D"}</span>
+          <span className="proj-badge">{is2DMode ? "2D" : "3D"}</span>
+        </button>
+      </div>
 
       <div className="map-footer">
         <div className="map-footer-content">
@@ -1298,6 +1526,17 @@ function Map({
                     onClick={() => setIsMobileMenuOpen(false)}
                   />
                   <div className="footer-overflow-menu">
+                    <button
+                      className="btn btn-outline footer-btn"
+                      onClick={() => {
+                        if (onToggle2D3D) onToggle2D3D(!is2DMode);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      style={{ display: "flex", alignItems: "center", gap: "6px", justifyContent: "center" }}
+                    >
+                      <span style={{ fontSize: "1.1rem" }}>{is2DMode ? "🌐" : "🗺️"}</span>
+                      {is2DMode ? "Switch to 3D" : "Switch to 2D"}
+                    </button>
                     <button
                       className="btn btn-pink footer-btn"
                       onClick={() => { setIsEventMode(true); setIsMobileMenuOpen(false); }}

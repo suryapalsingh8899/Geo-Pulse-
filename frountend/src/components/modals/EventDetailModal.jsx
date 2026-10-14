@@ -79,14 +79,11 @@ const EventDetailModal = ({
           }}
         >
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+            style={{ display: "flex", flexDirection: "column", gap: "4px" }}
           >
-            <span className="modal-eyebrow pink">
-              🎟️ Community Event
-            </span>
             <h2
               className="modal-title"
-              style={{ fontSize: "1.75rem", margin: 0, fontWeight: 800 }}
+              style={{ fontSize: "1.35rem", margin: "0 0 2px 0", fontWeight: 600 }}
             >
               {event.title || "Event Details"}
             </h2>

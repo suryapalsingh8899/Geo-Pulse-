@@ -83,16 +83,12 @@ const AddReportModal = ({
           &times;
         </button>
         <div className="modal-header-hero">
-          <span className="modal-eyebrow warning">
-            📍 Community Report
-          </span>
           <h2 className="modal-title">
             {initialData ? "Edit Report" : "Post a Community Report"}
           </h2>
           <p className="modal-subtitle">
             Location: {location.lat.toFixed(4)}, {location.lng.toFixed(4)} • Visible to everyone nearby
           </p>
-          <div className="modal-header-divider warning" />
         </div>
 
         <form onSubmit={handleSubmit} className="registration-form">

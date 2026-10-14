@@ -31,17 +31,13 @@ const PublicProfileModal = ({ user, reports = [], events = [], onClose }) => {
         <button className="close-btn" onClick={onClose}>
           &times;
         </button>
-        <div className="modal-header-hero centered">
-          <span className="modal-eyebrow">
-            🌐 Community Member
-          </span>
+        <div className="modal-header-hero">
           <h2 className="modal-title">
             User Profile
           </h2>
           <p className="modal-subtitle">
             Public community reports, events, and helpful votes from this user
           </p>
-          <div className="modal-header-divider" />
         </div>
 
         <div

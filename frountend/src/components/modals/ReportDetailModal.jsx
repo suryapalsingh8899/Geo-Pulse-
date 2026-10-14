@@ -89,11 +89,8 @@ const ReportDetailModal = ({
             marginBottom: "5px",
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-            <span className="modal-eyebrow warning">
-              📋 Community Incident
-            </span>
-            <h2 className="modal-title" style={{ fontSize: "1.65rem", margin: 0, fontWeight: 800 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            <h2 className="modal-title" style={{ fontSize: "1.35rem", margin: 0, fontWeight: 600 }}>
               {report.title || "Report Details"}
             </h2>
           </div>

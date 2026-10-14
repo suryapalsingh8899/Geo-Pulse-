@@ -29,16 +29,12 @@ const InfoModal = ({ onClose }) => {
 
         {/* Modal Hero Header */}
         <div className="modal-header-hero" style={{ marginBottom: "16px" }}>
-          <span className="modal-eyebrow">
-            🌍 Guide & Information
-          </span>
-          <h2 className="modal-title" style={{ fontSize: "1.7rem" }}>
+          <h2 className="modal-title">
             About Geo Pulse & How to Use
           </h2>
           <p className="modal-subtitle">
             A simple guide to explore the 3D globe, view live disaster alerts, and post community reports.
           </p>
-          <div className="modal-header-divider" />
         </div>
 
         {/* Tab Navigation */}

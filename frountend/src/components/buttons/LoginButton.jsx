@@ -45,6 +45,7 @@ const LoginButton = ({
   return (
     <>
       <button
+        className="nav-btn-auth nav-btn-login"
         onClick={onClick}
         style={{
           display: "flex",
@@ -87,14 +88,10 @@ const LoginButton = ({
               ×
             </button>
             <div className="modal-header-hero">
-              <span className="modal-eyebrow">
-                🔐 Sign In
-              </span>
               <h2 className="modal-title">Welcome Back</h2>
               <p className="modal-subtitle">
                 Enter your phone number to sign in and post community reports
               </p>
-              <div className="modal-header-divider" />
             </div>
 
             {step === 1 ? (

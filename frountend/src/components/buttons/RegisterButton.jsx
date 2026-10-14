@@ -44,6 +44,7 @@ const RegisterButton = ({
   return (
     <>
       <button 
+        className="nav-btn-auth nav-btn-register"
         onClick={onClick}
         style={{
           display: "flex",
@@ -88,14 +89,10 @@ const RegisterButton = ({
               ×
             </button>
             <div className="modal-header-hero">
-              <span className="modal-eyebrow success">
-                ✨ Create an Account
-              </span>
               <h2 className="modal-title">Join Geo Pulse</h2>
               <p className="modal-subtitle">
                 Sign up to post community reports, host events, and get live disaster alerts
               </p>
-              <div className="modal-header-divider" />
             </div>
 
             {step === 1 ? (

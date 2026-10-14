@@ -158,9 +158,6 @@ const AddEventModal = ({ location, onSubmit, onClose, initialData = null }) => {
             &times;
           </button>
           <div className="modal-header-hero">
-            <span className="modal-eyebrow pink">
-              🎟️ Community Event
-            </span>
             <h2 className="modal-title">
               {initialData ? "Edit Event" : "Create a Community Event"}
             </h2>
@@ -169,7 +166,6 @@ const AddEventModal = ({ location, onSubmit, onClose, initialData = null }) => {
                 ? `Location: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)} • Invite people nearby`
                 : "Plan a meetup, music show, sports match, or gathering for the community"}
             </p>
-            <div className="modal-header-divider pink" />
           </div>
 
           <form onSubmit={handleSubmit} className="registration-form">

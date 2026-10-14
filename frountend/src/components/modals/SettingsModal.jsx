@@ -37,16 +37,12 @@ const SettingsModal = ({
           &times;
         </button>
         <div className="modal-header-hero">
-          <span className="modal-eyebrow">
-            ⚙️ App Settings
-          </span>
           <h2 className="modal-title">
             {t("settings")}
           </h2>
           <p className="modal-subtitle">
             Change your theme, location settings, and live disaster alerts
           </p>
-          <div className="modal-header-divider" />
         </div>
 
         <div

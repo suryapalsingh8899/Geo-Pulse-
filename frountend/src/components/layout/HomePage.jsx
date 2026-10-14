@@ -10,6 +10,8 @@ import AddReportModal from "../modals/AddReportModal";
 import AddEventModal from "../modals/AddEventModal";
 import PublicProfileModal from "../modals/PublicProfileModal";
 import InfoModal from "../modals/InfoModal";
+import SearchBar from "./SearchBar";
+import Mode2D3DToggle from "./Mode2D3DToggle";
 import api from "../../services/api";
 
 const initialMockReports = [
@@ -333,6 +335,8 @@ function HomePage() {
   const [userName, setUserName] = useState("User");
   const [profilePic, setProfilePic] = useState(null);
   const [selectedPublicUser, setSelectedPublicUser] = useState(null);
+  const [searchTarget, setSearchTarget] = useState(null);
+  const [is2DMode, setIs2DMode] = useState(false);
 
   // Registration form state
   const [registerStep, setRegisterStep] = useState(1);
@@ -518,7 +522,7 @@ function HomePage() {
     } else {
       console.error("Login OTP error:", res.message);
       showToast(res.message || "Failed to send OTP. Please try again.", "error");
-      
+
       // Auto-switch to registration if not registered
       if (res.message && res.message.includes("register")) {
         setTimeout(() => {
@@ -787,49 +791,42 @@ function HomePage() {
           isDarkMode={darkMode}
           setDarkMode={setDarkMode}
           onCurrentPageChange={setCurrentPage}
+          searchTarget={searchTarget}
+          onClearSearchTarget={() => setSearchTarget(null)}
+          is2DMode={is2DMode}
+          onToggle2D3D={setIs2DMode}
         />
       </div>
 
       <header
         className="navbar glass-header"
-        style={{ background: "transparent", border: "none", boxShadow: "none", backdropFilter: "none", WebkitBackdropFilter: "none" }}
       >
-        <div className="navbar-left" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div
-            className="logo"
-            style={{ textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}
-          >
+        <div className="navbar-left">
+          <div className="logo">
             Geo Pulse
           </div>
         </div>
-        <div className="navbar-right" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+
+        <div className="navbar-center">
+          <SearchBar onSelectLocation={(loc) => setSearchTarget(loc)} />
+          <Mode2D3DToggle is2DMode={is2DMode} onToggle={setIs2DMode} />
+        </div>
+
+        <div className="navbar-right">
           <button
+            className="btn-info-about"
             onClick={() => setShowInfoModal(true)}
-            style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center",
-              width: "42px",
-              height: "42px",
-              padding: "0", 
-              borderRadius: "12px", 
-              border: "none", 
-              background: "transparent",
-              cursor: "pointer", 
-              boxShadow: "none",
-              color: "var(--text-color)"
-            }}
             title="About Geo Pulse & User Guide"
           >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              width="24" 
-              height="24" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
               strokeLinejoin="round"
             >
               <circle cx="12" cy="12" r="10"></circle>
